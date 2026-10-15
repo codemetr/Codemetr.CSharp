@@ -48,7 +48,9 @@ public sealed class AnalysisScope
     public EntryJudgement Judge(BaselineEntry entry, Func<string, bool>? fileExists)
     {
         var sites = Declarations?.Find(entry.Type).Where(site => site.File != entry.File).ToArray() ?? [];
-        var hiddenMember = entry.Member is not null && sites.Any(site => site.NeverMeasured && site.Members.Contains(entry.Member));
+        var simpleMember = entry.Member is null ? null : DeclarationIndex.SimpleMemberName(entry.Member);
+        var hiddenMember = simpleMember is not null && sites.Any(site => site.NeverMeasured
+            && site.Members.Any(member => DeclarationIndex.SimpleMemberName(member) == simpleMember));
         if (hiddenMember) return EntryJudgement.Unmeasured;
         if (Measured is null || Measured.Contains(entry.File))
         {
@@ -57,9 +59,15 @@ public sealed class AnalysisScope
             return Uncertain.Contains(entry.File) || hiddenPart ? EntryJudgement.Unverified : EntryJudgement.Fixed;
         }
         if (fileExists?.Invoke(entry.File) != false) return EntryJudgement.Unmeasured;
+        return JudgeDeleted(entry, sites);
+    }
+
+    // The recorded file is gone: where its type lives now decides.
+    EntryJudgement JudgeDeleted(BaselineEntry entry, DeclarationSite[] sites)
+    {
         if (entry.Member is null && sites.Length > 0 && sites.All(site => site.NeverMeasured)) return EntryJudgement.Unmeasured;
-        if (sites.Any(site => !site.NeverMeasured && Measured.Contains(site.File))) return EntryJudgement.Fixed;
-        if (sites.Length > 0) return EntryJudgement.Unverified;
+        if (sites.Any(site => !site.NeverMeasured && Measured!.Contains(site.File))) return EntryJudgement.Fixed;
+        if (sites.Length > 0 || Declarations?.HasLinkedDirectory == true) return EntryJudgement.Unverified;
         // A deleted file is settled by a run over its directory; a file list may lack the rename target.
         return directories.Any(directory => Below(entry.File, directory)) ? EntryJudgement.Fixed : EntryJudgement.Unverified;
     }

@@ -76,6 +76,12 @@ public static class SourceCollector
     public static bool IsInSkippedDirectory(string relativePath) =>
         relativePath.Split('/').SkipLast(1).Any(segment => SkippedDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
 
+    /// <summary>True when any folder below <paramref name="root"/> (outside .git) is a symbolic link.</summary>
+    public static bool HasLinkedDirectory(string root) =>
+        Directory.EnumerateDirectories(root, "*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 })
+            .Any(directory => new DirectoryInfo(directory).LinkTarget is not null
+                && !Path.GetRelativePath(root, directory).Split(Path.DirectorySeparatorChar).Contains(".git"));
+
     /// <summary>Every C# file below <paramref name="root"/>, skipped folders included (only .git is left out).</summary>
     public static string[] EveryCSharpFile(string root) =>
         Directory.EnumerateFiles(root, "*.cs", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = System.IO.FileAttributes.ReparsePoint })
