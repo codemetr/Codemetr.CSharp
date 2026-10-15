@@ -69,4 +69,11 @@ public sealed class BaselineTests
         Assert.Equal(["Gone"], comparison.Stale.Select(s => s.Entry.Type));
         Assert.True(baseline.Compare([], new AnalysisScope(["src/Gone.cs"], null, unparsed: ["src/Gone.cs"])).Passed);
     }
+
+    [Fact]
+    public void TheRootScopeDoesNotReachOutsideTheRoot()
+    {
+        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "L", 8, "../lib/L.cs")], new AnalysisScope(["../lib/L.cs"], null));
+        Assert.True(baseline.Compare([], new AnalysisScope([], null, directories: [""])).Passed);
+    }
 }

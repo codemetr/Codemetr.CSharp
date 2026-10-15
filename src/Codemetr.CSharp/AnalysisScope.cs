@@ -25,9 +25,14 @@ public sealed class AnalysisScope
         this.unparsed = new(unparsed ?? [], StringComparer.Ordinal);
     }
 
+    // The root ("") covers everything inside it, not paths that leave it ("../lib/L.cs").
+    static bool Below(string file, string directory) => directory.Length == 0
+        ? !file.StartsWith("../", StringComparison.Ordinal) && file != ".."
+        : file.StartsWith(directory + "/", StringComparison.Ordinal);
+
     /// <summary>True when the entry's file was judged by this run and, with a type selection, its type was selected.</summary>
     public bool Contains(string file, string type) =>
         !unparsed.Contains(file)
-        && (files.Contains(file) || directories.Any(directory => directory.Length == 0 || file.StartsWith(directory + "/", StringComparison.Ordinal)))
+        && (files.Contains(file) || directories.Any(directory => Below(file, directory)))
         && (types is null || types.Contains(type));
 }

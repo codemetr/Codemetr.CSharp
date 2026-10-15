@@ -47,7 +47,8 @@ public static class CodeAnalyzer
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true, nullableContextOptions: NullableContextOptions.Disable));
 
         var simpleName = SimpleName(typeQuery);
-        var types = new ConcurrentBag<TypeMetrics>();
+        var types = new ConcurrentBag<(int Start, TypeMetrics Metrics)>();
+        var duplicates = new ConcurrentBag<string>();
         // Semantic models of one compilation are thread-safe; binding dominates the run time.
         Parallel.ForEach(measurable, new ParallelOptions { CancellationToken = cancellationToken }, item =>
         {
@@ -55,19 +56,32 @@ public static class CodeAnalyzer
             var root = (CompilationUnitSyntax)item.Tree.GetRoot(cancellationToken);
             var topLevel = root.Members.OfType<GlobalStatementSyntax>().ToArray();
             if (topLevel.Length > 0 && (simpleName is null || simpleName == "Program"))
-                types.Add(TypeMeasurer.MeasureTopLevel(topLevel, model, item.Document.Path));
+                types.Add((topLevel[0].SpanStart, TypeMeasurer.MeasureTopLevel(topLevel, model, item.Document.Path)));
             // Extension blocks belong to their enclosing static class.
             foreach (var declaration in root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>().Where(d => d is not ExtensionBlockDeclarationSyntax))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (simpleName is null || declaration.Identifier.ValueText == simpleName)
-                    types.Add(TypeMeasurer.Measure(declaration, model, item.Document.Path));
+                if (simpleName is not null && declaration.Identifier.ValueText != simpleName) continue;
+                types.Add((declaration.SpanStart, TypeMeasurer.Measure(declaration, model, item.Document.Path)));
+                if (DuplicateDeclaration(compilation, model, declaration, cancellationToken) is { } duplicate) duplicates.Add(duplicate);
             }
         });
         var result = new AnalysisResult(
-            types.OrderBy(type => type.File, StringComparer.Ordinal).ThenBy(type => type.Line).ThenBy(type => type.FullName, StringComparer.Ordinal).ToArray(),
-            errors, documents.Count);
+            types.OrderBy(type => type.Metrics.File, StringComparer.Ordinal).ThenBy(type => type.Start).Select(type => type.Metrics).ToArray(),
+            errors, documents.Count) { Warnings = duplicates.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() };
         return result.SelectTypes(typeQuery);
+    }
+
+    // Roslyn merges a type declared twice (not as partial parts) into one symbol with several declarations,
+    // typically when the context spans several projects; members and base class then mix silently.
+    static string? DuplicateDeclaration(CSharpCompilation compilation, SemanticModel model, BaseTypeDeclarationSyntax declaration, CancellationToken cancellationToken)
+    {
+        if (model.GetDeclaredSymbol(declaration, cancellationToken) is not { } symbol) return null;
+        var declarations = symbol.DeclaringSyntaxReferences.Select(reference => reference.GetSyntax(cancellationToken)).OfType<BaseTypeDeclarationSyntax>().ToArray();
+        if (declarations.Length < 2 || declarations.All(d => d.Modifiers.Any(SyntaxKind.PartialKeyword))) return null;
+        var others = declarations.Where(d => d != declaration).Select(d => d.SyntaxTree.FilePath).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
+        return $"{symbol.ToDisplayString()} is declared more than once in the compilation context (also in {string.Join(", ", others)}); " +
+            "coupling and inheritance may mix the declarations - narrow 'context' in codemetr.json.";
     }
 
     static SyntaxTree Parse(SourceDocument document, CancellationToken cancellationToken) =>

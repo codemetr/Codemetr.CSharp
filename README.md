@@ -35,8 +35,9 @@ optimistic metrics.
 ## Metrics
 
 Each type declaration is measured on its own, nested types included. Members belong to the
-type that declares them; local functions are separate members (`Method.Local`), lambdas count
-toward the member that contains them.
+type that declares them and carry their parameter types, so overloads stay apart (`Save(Order)`,
+`.ctor(int, string)`, `Total.get`). Local functions are separate members
+(`Method(int).Local(string)`), lambdas count toward the member that contains them.
 
 | Metric | Level | Definition |
 | --- | --- | --- |
@@ -44,14 +45,16 @@ toward the member that contains them.
 | Nesting depth | member | deepest control-flow nesting; body statements are depth 0, `else if` stays flat |
 | Parameters | member | declared parameters |
 | Maintainability index | type | `max(0, (171 - 5.2 ln V - 0.23 CC - 16.2 ln LOC) * 100 / 171)`, V = Halstead volume (token approximation), CC = sum of member complexities, LOC = lines with code tokens other than braces |
-| Class coupling | type | distinct types referenced by the type's own code: declarations, `new`, attributes, static and extension calls, and the receiver type of instance member access. Built-ins, tuples, type parameters and the type itself do not count. The report lists the names. |
+| Class coupling | type | distinct types referenced by the type's own code: declarations, `new`, attributes, static and extension calls, and the receiver type of instance member access. Types with a C# keyword (`int`, `string`, `object`, ...), `Nullable<T>`, tuples, type parameters, `nameof` operands and the type itself do not count; framework types such as `IEnumerable<T>` or `DateTime` do. The report lists the names. |
 | Depth of inheritance | class | base classes above the class, `System.Object` excluded |
 | Size and surface | type | line span, constructor arity (classes only), public methods, instance fields |
 
 Coupling and inheritance are resolved with a semantic model over the `context` directories
 (default: the whole root) plus the running .NET platform. Types from other assemblies (NuGet packages, other projects) cannot be
 resolved; they still count and appear with a leading `?`, for example `?BackgroundService`.
-An unresolved base class counts as one level.
+An unresolved base class counts as one level, unless its name follows the interface convention
+(`I` + upper-case letter). A type declared twice in the context (not as `partial`) is reported in
+`warnings`, because Roslyn merges such declarations and their metrics mix.
 
 ## Configuration
 
@@ -97,6 +100,9 @@ their values. `check` then reports each violation as `new`, `worsened` or `basel
 the first two fail. A recorded violation that was fixed or improved is reported as `stale`
 and fails until the baseline is recorded again, so tolerated debt can only shrink.
 
+Members are identified by their parameter types as written, so `M(string)` and `M(string?)` are
+different members: changing a signature reports the old entry as stale and the member as new.
+
 Staleness and recording are limited to the files and types of the run: checking or recording
 only changed files leaves the entries of all other files untouched.
 
@@ -140,6 +146,11 @@ var violations = GuardEvaluator.Evaluate(result.SelectTypes("OrderService").Type
 - The maintainability index uses a token-level Halstead approximation; compare values within
   one code base rather than with other tools.
 - Partial types are measured per declaration.
+- Field and property initializers (for example a lambda assigned to a field) are not measured as members.
+- Code inside inactive `#if` regions is invisible; no project files are read, so no preprocessor
+  symbols, package references or per-project language settings are applied.
+- Top-level statements are reported as type `Program` with kind `top-level`; C# 14 extension
+  blocks count as members of their static class (`extension(string).Name()`).
 
 ## License
 

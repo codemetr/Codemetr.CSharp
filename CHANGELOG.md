@@ -9,3 +9,4 @@
 - Tool `codemetr-csharp`: `analyze`, `check`, `baseline`; JSON and text reports; exit codes 0/1/2;
   `--files-from` for changed-file runs with the whole root as compilation context.
 - Top-level statements and C# 14 extension blocks are measured.
+- Warning when a type is declared twice in the compilation context.

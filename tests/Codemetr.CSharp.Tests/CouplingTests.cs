@@ -97,4 +97,41 @@ public sealed class CouplingTests
             new SourceDocument("b.cs", "namespace N; class Service { void M() { var r = Repo.Open(); } }")]);
         Assert.Equal(["N.Repo"], result.Types.Single(t => t.Name == "Service").CoupledTypes);
     }
+
+    [Fact]
+    public void GenericCollectionInterfacesAndOtherFrameworkTypesCount()
+    {
+        const string code = """
+            using System.Collections.Generic;
+            class Order { }
+            class C
+            {
+                IEnumerable<Order> A() => [];
+                IReadOnlyList<Order> B() => [];
+                void D(IList<int> a, ICollection<int> b, System.IDisposable d, System.DateTime t, int? n, string s, object o) { }
+            }
+            """;
+        Assert.Equal(["Order", "System.Collections.Generic.ICollection<T>", "System.Collections.Generic.IEnumerable<T>",
+            "System.Collections.Generic.IList<T>", "System.Collections.Generic.IReadOnlyList<T>", "System.DateTime", "System.IDisposable"],
+            Source.Type(code, "C").CoupledTypes);
+    }
+
+    [Fact]
+    public void AnUnresolvedInterfaceDoesNotDisableTheReceiverHeuristic()
+    {
+        const string code = "class H : IRequestHandler<int> { void M() { Guard.Check(); } }";
+        var type = Source.Type(code, "H");
+        Assert.Equal(0, type.DepthOfInheritance);
+        Assert.Contains("?Guard", type.CoupledTypes);
+    }
+
+    [Fact]
+    public void DuplicateDeclarationsInTheContextAreReported()
+    {
+        var measured = new SourceDocument("b/Options.cs", "namespace N; class Options { }");
+        var other = new SourceDocument("a/Options.cs", "namespace N; class Options : Base { } class Base { }");
+        var result = CodeAnalyzer.Analyze([measured], [other, measured]);
+        Assert.Contains(result.Warnings, warning => warning.Contains("N.Options", StringComparison.Ordinal) && warning.Contains("a/Options.cs", StringComparison.Ordinal));
+        Assert.Empty(CodeAnalyzer.Analyze([new SourceDocument("p.cs", "partial class P { } partial class P { }")]).Warnings);
+    }
 }
