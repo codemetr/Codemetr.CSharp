@@ -8,7 +8,7 @@ internal static class TextReport
         var s = report.Summary;
         var verdict = report.Command == CodemetrService.Analyze ? $"{s.Violations} violation(s)" : report.Passed ? "PASSED" : "FAILED";
         output.WriteLine($"codemetr-csharp {report.Command}: {verdict} - {s.Types} types in {s.Files} files, "
-            + $"{s.New} new, {s.Worsened} worsened, {s.Baselined} baselined, {s.Stale} stale, {s.ParseErrors} parse errors");
+            + $"{s.New} new, {s.Worsened} worsened, {s.Baselined} baselined, {s.Stale} stale, {s.ParseErrors} parse errors, {s.Skipped} skipped");
         foreach (var warning in report.Warnings ?? []) output.WriteLine("warning: " + warning);
         foreach (var error in report.ParseErrors)
             output.WriteLine($"{error.File}:{error.Line}: parse error {error.Id}: {error.Message}");

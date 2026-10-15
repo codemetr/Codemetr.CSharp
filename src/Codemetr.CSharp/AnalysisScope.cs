@@ -38,17 +38,30 @@ public sealed class AnalysisScope
     /// <summary>Measured paths whose inactive #if code may hide a violation.</summary>
     public IReadOnlySet<string> Uncertain { get; init; } = new HashSet<string>();
 
-    /// <summary>Types declared only in files that exist but are not measured.</summary>
-    public IReadOnlySet<string> UnmeasuredTypes { get; init; } = new HashSet<string>();
+    /// <summary>Where types are declared outside the measured files; without it, no move out of sight is detected.</summary>
+    public DeclarationIndex? Declarations { get; init; }
 
-    /// <summary>Classifies a recorded entry in scope that no current violation matches.</summary>
-    public EntryJudgement Judge(string file, string type, Func<string, bool>? fileExists)
+    /// <summary>
+    /// Classifies a recorded entry in scope that no current violation matches. Only a proven fix is
+    /// <see cref="EntryJudgement.Fixed"/>: the member or type must not have moved into code that is never measured.
+    /// </summary>
+    public EntryJudgement Judge(BaselineEntry entry, Func<string, bool>? fileExists)
     {
-        var measured = Measured is null || Measured.Contains(file);
-        if (measured) return Uncertain.Contains(file) ? EntryJudgement.Unverified : EntryJudgement.Fixed;
-        if (fileExists?.Invoke(file) != false || UnmeasuredTypes.Contains(type)) return EntryJudgement.Unmeasured;
+        var sites = Declarations?.Find(entry.Type).Where(site => site.File != entry.File).ToArray() ?? [];
+        var hiddenMember = entry.Member is not null && sites.Any(site => site.NeverMeasured && site.Members.Contains(entry.Member));
+        if (hiddenMember) return EntryJudgement.Unmeasured;
+        if (Measured is null || Measured.Contains(entry.File))
+        {
+            // Type-level values drop when members move into an unmeasured partial part; that is no proof of a fix.
+            var hiddenPart = entry.Member is null && sites.Any(site => site.NeverMeasured);
+            return Uncertain.Contains(entry.File) || hiddenPart ? EntryJudgement.Unverified : EntryJudgement.Fixed;
+        }
+        if (fileExists?.Invoke(entry.File) != false) return EntryJudgement.Unmeasured;
+        if (entry.Member is null && sites.Length > 0 && sites.All(site => site.NeverMeasured)) return EntryJudgement.Unmeasured;
+        if (sites.Any(site => !site.NeverMeasured && Measured.Contains(site.File))) return EntryJudgement.Fixed;
+        if (sites.Length > 0) return EntryJudgement.Unverified;
         // A deleted file is settled by a run over its directory; a file list may lack the rename target.
-        return directories.Any(directory => Below(file, directory)) ? EntryJudgement.Fixed : EntryJudgement.Unverified;
+        return directories.Any(directory => Below(entry.File, directory)) ? EntryJudgement.Fixed : EntryJudgement.Unverified;
     }
 
     /// <summary>True when the entry's file was judged by this run and, with a type selection, its type was selected.</summary>
