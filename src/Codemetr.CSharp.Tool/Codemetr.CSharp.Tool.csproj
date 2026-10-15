@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>codemetr-csharp</ToolCommandName>
+    <PackageId>Codemetr.CSharp.Tool</PackageId>
+    <RootNamespace>Codemetr.CSharp.Tool</RootNamespace>
+    <RollForward>Major</RollForward>
+    <Description>codemetr-csharp command line: C# code metrics per class and member as JSON, with a guard and ratchet baseline for local runs and CI.</Description>
+    <PackageTags>code-metrics;roslyn;guard;dotnet-tool</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Codemetr.CSharp/Codemetr.CSharp.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+    <InternalsVisibleTo Include="Codemetr.CSharp.Tests" />
+  </ItemGroup>
+</Project>
