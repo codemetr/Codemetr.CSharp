@@ -2,6 +2,7 @@ namespace Codemetr.CSharp.Tool;
 
 /// <summary>JSON document returned by every command.</summary>
 internal sealed record CodemetrReport(
+    int Schema,
     string Tool,
     string Version,
     string Command,
