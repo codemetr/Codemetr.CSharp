@@ -7,12 +7,12 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <Deterministic>true</Deterministic>
     <Version>0.1.0</Version>
-    <Authors>Alexander Bleissem</Authors>
+    <Authors>codemetr</Authors>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/bleissem/codemetr</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/bleissem/codemetr</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/codemetr/Codemetr.CSharp</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/codemetr/Codemetr.CSharp</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Copyright>Copyright (c) 2026 Alexander Bleissem</Copyright>
+    <Copyright>Copyright (c) 2026 codemetr</Copyright>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>

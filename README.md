@@ -1,4 +1,6 @@
-# codemetr.csharp
+# Codemetr.CSharp
+
+[![ci](https://github.com/codemetr/Codemetr.CSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/codemetr/Codemetr.CSharp/actions/workflows/ci.yml)
 
 C# code metrics per **type and member**, built on Roslyn, with a configurable guard and a
 ratchet baseline. One JSON report per run, stable rule ids and exit codes, so the same command
