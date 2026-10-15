@@ -6,14 +6,16 @@ internal static class TextReport
     public static void Write(CodemetrReport report, TextWriter output)
     {
         var s = report.Summary;
-        output.WriteLine($"codemetr-csharp {report.Command}: {(report.Passed ? "PASSED" : "FAILED")} - {s.Types} types in {s.Files} files, "
+        var verdict = report.Command == CodemetrService.Analyze ? $"{s.Violations} violation(s)" : report.Passed ? "PASSED" : "FAILED";
+        output.WriteLine($"codemetr-csharp {report.Command}: {verdict} - {s.Types} types in {s.Files} files, "
             + $"{s.New} new, {s.Worsened} worsened, {s.Baselined} baselined, {s.Stale} stale, {s.ParseErrors} parse errors");
         foreach (var warning in report.Warnings ?? []) output.WriteLine("warning: " + warning);
         foreach (var error in report.ParseErrors)
             output.WriteLine($"{error.File}:{error.Line}: parse error {error.Id}: {error.Message}");
         foreach (var v in report.Violations)
         {
-            output.WriteLine($"{v.File}:{v.Line}: [{v.Status}] {v.Rule}: {v.Message}");
+            var status = v.Status == Codemetr.CSharp.CheckedViolation.Worsened ? $"worsened from {v.BaselineValue}" : v.Status;
+            output.WriteLine($"{v.File}:{v.Line}: [{status}] {v.Rule}: {v.Message}");
             if (v.Status != Codemetr.CSharp.CheckedViolation.Baselined) output.WriteLine($"    hint: {v.Hint}");
         }
         foreach (var entry in report.Stale)

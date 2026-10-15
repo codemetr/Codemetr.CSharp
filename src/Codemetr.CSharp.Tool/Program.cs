@@ -30,11 +30,16 @@ internal static class Program
     static async Task<int> ExecuteAsync(CliOptions options, TextWriter stdout, TextWriter stderr)
     {
         var report = CodemetrService.Run(options.Command, options.Request);
-        foreach (var warning in report.Warnings ?? []) await stderr.WriteLineAsync("codemetr-csharp: warning: " + warning);
+        // Text output carries the warnings itself; JSON keeps stdout machine-readable and repeats them on stderr.
         if (options.Format == CliOptions.Text) TextReport.Write(report, stdout);
-        else await stdout.WriteLineAsync(JsonSerializer.Serialize(report, Codemetr.CSharp.CodemetrJson.Options));
+        else
+        {
+            foreach (var warning in report.Warnings ?? []) await stderr.WriteLineAsync("codemetr-csharp: warning: " + warning);
+            await stdout.WriteLineAsync(JsonSerializer.Serialize(report, Codemetr.CSharp.CodemetrJson.Options));
+        }
         if (report.ParseErrors.Count > 0) return ExitCodes.InputError;
-        return options.Command == CodemetrService.Check && !report.Passed ? ExitCodes.Findings : ExitCodes.Passed;
+        // analyze only reports; check and baseline are verdicts.
+        return options.Command != CodemetrService.Analyze && !report.Passed ? ExitCodes.Findings : ExitCodes.Passed;
     }
 
     // Input problems are reported by their message; anything else names its exception type as well.

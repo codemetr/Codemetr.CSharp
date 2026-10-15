@@ -10,7 +10,7 @@ public sealed class BaselineTests
     [Fact]
     public void ClassifiesNewWorsenedAndBaselined()
     {
-        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "T", 8), V(RuleIds.CyclomaticComplexity, "U", 8)], AllOfA);
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "T", 8), V(RuleIds.CyclomaticComplexity, "U", 8)]);
         var comparison = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 8), V(RuleIds.CyclomaticComplexity, "U", 9), V(RuleIds.Parameters, "T", 9)], AllOfA);
         Assert.Equal([CheckedViolation.Baselined, CheckedViolation.Worsened, CheckedViolation.New], comparison.Violations.Select(v => v.Status));
         Assert.False(comparison.Passed);
@@ -20,7 +20,7 @@ public sealed class BaselineTests
     [Fact]
     public void FixedOrImprovedEntriesAreStaleSoTheRatchetTightens()
     {
-        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "T", 8), V(RuleIds.MaintainabilityIndex, "U", 10, member: null)], AllOfA);
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "T", 8), V(RuleIds.MaintainabilityIndex, "U", 10, member: null)]);
         var comparison = baseline.Compare([V(RuleIds.MaintainabilityIndex, "U", 12, member: null)], AllOfA);
         Assert.Equal([(RuleIds.CyclomaticComplexity, (double?)null), (RuleIds.MaintainabilityIndex, 12d)],
             comparison.Stale.Select(s => (s.Entry.Rule, s.CurrentValue)).OrderBy(s => s.Rule, StringComparer.Ordinal));
@@ -30,11 +30,10 @@ public sealed class BaselineTests
     [Fact]
     public void StalenessAndRecordingStayInsideTheAnalysedScope()
     {
-        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "T", 8, "a.cs"), V(RuleIds.CyclomaticComplexity, "Other", 8, "b.cs")],
-            new AnalysisScope(["a.cs", "b.cs"], null));
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "T", 8, "a.cs"), V(RuleIds.CyclomaticComplexity, "Other", 8, "b.cs")]);
         Assert.True(baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 8, "a.cs")], AllOfA).Passed);
         Assert.True(baseline.Compare([], new AnalysisScope(["a.cs"], ["Unrelated"])).Passed);
-        var rerecorded = baseline.Record([], AllOfA);
+        var rerecorded = baseline.Tighten(baseline.Compare([], AllOfA));
         Assert.Equal(["Other"], rerecorded.Entries.Select(e => e.Type));
     }
 
@@ -51,7 +50,7 @@ public sealed class BaselineTests
     public void SharedKeysAreMatchedAsAMultisetSoNoViolationHidesBehindAnother()
     {
         // Two same-named local functions in one method share a key.
-        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "T", 9), V(RuleIds.CyclomaticComplexity, "T", 6)], AllOfA);
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "T", 9), V(RuleIds.CyclomaticComplexity, "T", 6)]);
         Assert.Equal(2, baseline.Entries.Length);
         Assert.True(baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 6), V(RuleIds.CyclomaticComplexity, "T", 9)], AllOfA).Passed);
         var grown = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 9), V(RuleIds.CyclomaticComplexity, "T", 9)], AllOfA);
@@ -63,8 +62,7 @@ public sealed class BaselineTests
     [Fact]
     public void EntriesBelowAnAnalysedDirectoryBecomeStaleWhenTheirFileIsGone()
     {
-        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "Gone", 8, "src/Gone.cs"), V(RuleIds.CyclomaticComplexity, "Kept", 8, "lib/Kept.cs")],
-            new AnalysisScope(["src/Gone.cs", "lib/Kept.cs"], null));
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "Gone", 8, "src/Gone.cs"), V(RuleIds.CyclomaticComplexity, "Kept", 8, "lib/Kept.cs")]);
         var comparison = baseline.Compare([], new AnalysisScope([], null, directories: ["src"]));
         Assert.Equal(["Gone"], comparison.Stale.Select(s => s.Entry.Type));
         Assert.True(baseline.Compare([], new AnalysisScope(["src/Gone.cs"], null, unparsed: ["src/Gone.cs"])).Passed);
@@ -73,7 +71,32 @@ public sealed class BaselineTests
     [Fact]
     public void TheRootScopeDoesNotReachOutsideTheRoot()
     {
-        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "L", 8, "../lib/L.cs")], new AnalysisScope(["../lib/L.cs"], null));
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "L", 8, "../lib/L.cs")]);
         Assert.True(baseline.Compare([], new AnalysisScope([], null, directories: [""])).Passed);
+    }
+
+    [Fact]
+    public void TighteningRemovesFixedLowersImprovedAndNeverAdds()
+    {
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "Fixed", 8), V(RuleIds.CyclomaticComplexity, "Better", 9), V(RuleIds.CyclomaticComplexity, "Same", 7)]);
+        var comparison = baseline.Compare([V(RuleIds.CyclomaticComplexity, "Better", 6), V(RuleIds.CyclomaticComplexity, "Same", 7), V(RuleIds.CyclomaticComplexity, "Fresh", 9)], AllOfA);
+        var tightened = baseline.Tighten(comparison);
+        Assert.Equal([("Better", 6d), ("Same", 7d)], tightened.Entries.Select(e => (e.Type, e.Value)).OrderBy(e => e.Type, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void AMovedFileKeepsItsDebtOnlyWhenTheOldFileIsGoneAndTheValueIsNotWorse()
+    {
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "T", 8, "old/A.cs")]);
+        var scope = new AnalysisScope(["old/A.cs", "new/A.cs"], null);
+        var moved = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 8, "new/A.cs")], scope, fileExists: path => path != "old/A.cs");
+        Assert.Equal(CheckedViolation.Baselined, Assert.Single(moved.Violations).Status);
+        Assert.Equal("new/A.cs", Assert.Single(moved.Stale).MovedTo);
+        Assert.Equal("new/A.cs", Assert.Single(baseline.Tighten(moved).Entries).File);
+
+        var worse = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 9, "new/A.cs")], scope, fileExists: path => path != "old/A.cs");
+        Assert.Equal(CheckedViolation.New, Assert.Single(worse.Violations).Status);
+        var copied = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 8, "new/A.cs")], scope, fileExists: _ => true);
+        Assert.Equal(CheckedViolation.New, Assert.Single(copied.Violations).Status);
     }
 }

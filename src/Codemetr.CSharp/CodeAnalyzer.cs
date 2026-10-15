@@ -49,11 +49,14 @@ public static class CodeAnalyzer
         var simpleName = SimpleName(typeQuery);
         var types = new ConcurrentBag<(int Start, TypeMetrics Metrics)>();
         var duplicates = new ConcurrentBag<string>();
+        var inactive = new ConcurrentBag<string>();
         // Semantic models of one compilation are thread-safe; binding dominates the run time.
         Parallel.ForEach(measurable, new ParallelOptions { CancellationToken = cancellationToken }, item =>
         {
             var model = compilation.GetSemanticModel(item.Tree);
             var root = (CompilationUnitSyntax)item.Tree.GetRoot(cancellationToken);
+            if (root.DescendantTrivia().Any(trivia => trivia.IsKind(SyntaxKind.DisabledTextTrivia) && !string.IsNullOrWhiteSpace(trivia.ToString())))
+                inactive.Add(item.Document.Path);
             var topLevel = root.Members.OfType<GlobalStatementSyntax>().ToArray();
             if (topLevel.Length > 0 && (simpleName is null || simpleName == "Program"))
                 types.Add((topLevel[0].SpanStart, TypeMeasurer.MeasureTopLevel(topLevel, model, item.Document.Path)));
@@ -68,7 +71,7 @@ public static class CodeAnalyzer
         });
         var result = new AnalysisResult(
             types.OrderBy(type => type.Metrics.File, StringComparer.Ordinal).ThenBy(type => type.Start).Select(type => type.Metrics).ToArray(),
-            errors, documents.Count) { Warnings = duplicates.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() };
+            errors, documents.Count) { Warnings = duplicates.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Concat(InactiveWarning(inactive)).ToArray() };
         return result.SelectTypes(typeQuery);
     }
 
@@ -82,6 +85,17 @@ public static class CodeAnalyzer
         var others = declarations.Where(d => d != declaration).Select(d => d.SyntaxTree.FilePath).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
         return $"{symbol.ToDisplayString()} is declared more than once in the compilation context (also in {string.Join(", ", others)}); " +
             "coupling and inheritance may mix the declarations - narrow 'context' in codemetr.json.";
+    }
+
+    const int ListedFiles = 5;
+
+    // No preprocessor symbols are defined, so code in #if branches is invisible to every metric.
+    static IEnumerable<string> InactiveWarning(IEnumerable<string> files)
+    {
+        var sorted = files.Order(StringComparer.Ordinal).ToArray();
+        if (sorted.Length == 0) yield break;
+        var more = sorted.Length > ListedFiles ? $" and {sorted.Length - ListedFiles} more" : "";
+        yield return $"{sorted.Length} file(s) contain inactive #if code that is not measured: {string.Join(", ", sorted.Take(ListedFiles))}{more}.";
     }
 
     static SyntaxTree Parse(SourceDocument document, CancellationToken cancellationToken) =>
