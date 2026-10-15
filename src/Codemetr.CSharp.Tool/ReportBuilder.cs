@@ -10,7 +10,7 @@ internal static class ReportBuilder
 
     static string StaleMessage(StaleEntry item) => item switch
     {
-        { Unmeasured: true } => "Recorded file exists but is no longer measured (excluded, generated header or skipped); measure it again or have the owner re-create the baseline.",
+        { Unmeasured: true } => "Recorded code is no longer measured (excluded, generated, or moved into build output); measure it again or have the owner re-create the baseline.",
         { MovedTo: { } target } => $"Recorded violation moved to {target}; run 'codemetr-csharp baseline' to update its path.",
         { CurrentValue: null } => "Recorded violation is fixed; run 'codemetr-csharp baseline' to remove it.",
         _ => "Recorded violation improved; run 'codemetr-csharp baseline' to tighten it.",

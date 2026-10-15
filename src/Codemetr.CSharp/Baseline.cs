@@ -88,6 +88,7 @@ public sealed record Baseline(int Schema, BaselineEntry[] Entries)
         var violated = violations.Select(v => v.Key).ToHashSet(StringComparer.Ordinal);
         vanished.AddRange(recorded.Where(group => !violated.Contains(group.Key)).SelectMany(group => group));
         // Only a proven fix may remove debt: unmeasured files fail, unverifiable ones stay as they are.
+        scope.Declarations?.Prepare(vanished.Select(entry => entry.Type));
         var unverified = new List<BaselineEntry>();
         foreach (var entry in vanished)
         {

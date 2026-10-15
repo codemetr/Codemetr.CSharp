@@ -19,3 +19,4 @@
   deleted in a file-list run stay until verified.
 - `baseline` writes safe updates even when other entries are refused; `summary.skipped` counts
   generated and excluded files.
+- Hidden members are matched by name; a root with linked folders leaves deleted entries unverified.

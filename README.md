@@ -128,8 +128,11 @@ Only a proven fix removes an entry. When a recorded violation is gone, codemetr 
 | file deleted, type only in code that is never measured | *no longer measured* |
 | file deleted, file-list run, or type in a file outside the run | unverified until a run measures it |
 
-To find moved code, codemetr scans the C# files below the root by syntax, including `bin`/`obj`
-and generated files, but only when a recorded violation has disappeared.
+To find moved code, codemetr scans the C# files below the root once by syntax, including
+`bin`/`obj` and generated files, but only when a recorded violation has disappeared. A member in
+hidden code is matched by its name, whatever the spelling of its parameter types. Folders that are
+symbolic links are not followed; while the root contains one, entries of deleted files stay
+unverified.
 
 `baseline` writes every safe update even when some entries are refused, so one deliberately
 excluded file does not block tightening elsewhere; the run still fails while anything is refused.
