@@ -1,0 +1,87 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+
+namespace Codemetr.CSharp;
+
+/// <summary>Measures the executable members declared directly in a type, plus their local functions.</summary>
+internal static class MemberCollector
+{
+    public static IReadOnlyList<MemberMetrics> Collect(BaseTypeDeclarationSyntax type)
+    {
+        var members = new List<MemberMetrics>();
+        if (type is not TypeDeclarationSyntax withMembers) return members;
+        foreach (var member in withMembers.Members)
+        {
+            switch (member)
+            {
+                case BaseMethodDeclarationSyntax method when method.Body is not null || method.ExpressionBody is not null:
+                    Add(members, method, Name(method), Kind(method), method.ParameterList.Parameters.Count);
+                    break;
+                case BasePropertyDeclarationSyntax property:
+                    AddAccessors(members, property);
+                    break;
+            }
+        }
+        return members;
+    }
+
+    static void AddAccessors(List<MemberMetrics> members, BasePropertyDeclarationSyntax property)
+    {
+        var name = property switch
+        {
+            PropertyDeclarationSyntax p => p.Identifier.ValueText,
+            EventDeclarationSyntax e => e.Identifier.ValueText,
+            _ => "this[]",
+        };
+        var parameters = property is IndexerDeclarationSyntax indexer ? indexer.ParameterList.Parameters.Count : 0;
+        var expressionBody = property switch
+        {
+            PropertyDeclarationSyntax p => p.ExpressionBody,
+            IndexerDeclarationSyntax i => i.ExpressionBody,
+            _ => null,
+        };
+        if (expressionBody is not null)
+        {
+            Add(members, property, name + ".get", "accessor", parameters);
+            return;
+        }
+        foreach (var accessor in property.AccessorList?.Accessors ?? default)
+            if (accessor.Body is not null || accessor.ExpressionBody is not null)
+                Add(members, accessor, name + "." + accessor.Keyword.ValueText, "accessor", parameters);
+    }
+
+    static void Add(List<MemberMetrics> members, SyntaxNode node, string name, string kind, int parameters)
+    {
+        members.Add(Measure(node, name, kind, parameters));
+        foreach (var local in node.DescendantNodes(child => child == node || child is not BaseTypeDeclarationSyntax)
+                     .OfType<LocalFunctionStatementSyntax>())
+            members.Add(Measure(local, name + "." + local.Identifier.ValueText, "localFunction", local.ParameterList.Parameters.Count));
+    }
+
+    static MemberMetrics Measure(SyntaxNode node, string name, string kind, int parameters)
+    {
+        var span = node.GetLocation().GetLineSpan();
+        return new MemberMetrics(name, kind, span.StartLinePosition.Line + 1,
+            span.EndLinePosition.Line - span.StartLinePosition.Line + 1,
+            CyclomaticComplexity.Measure(node), parameters, NestingDepth.Measure(node));
+    }
+
+    static string Name(BaseMethodDeclarationSyntax method) => method switch
+    {
+        MethodDeclarationSyntax m => m.Identifier.ValueText,
+        ConstructorDeclarationSyntax c => c.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.StaticKeyword) ? ".cctor" : ".ctor",
+        DestructorDeclarationSyntax d => "~" + d.Identifier.ValueText,
+        OperatorDeclarationSyntax o => "operator " + o.OperatorToken.ValueText,
+        ConversionOperatorDeclarationSyntax c => "operator " + c.Type,
+        _ => method.Kind().ToString(),
+    };
+
+    static string Kind(BaseMethodDeclarationSyntax method) => method switch
+    {
+        MethodDeclarationSyntax => "method",
+        ConstructorDeclarationSyntax => "constructor",
+        DestructorDeclarationSyntax => "destructor",
+        OperatorDeclarationSyntax => "operator",
+        _ => "conversion",
+    };
+}

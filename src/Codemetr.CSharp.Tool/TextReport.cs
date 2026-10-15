@@ -1,0 +1,27 @@
+namespace Codemetr.CSharp.Tool;
+
+/// <summary>Human-readable rendering of a report.</summary>
+internal static class TextReport
+{
+    public static void Write(CodemetrReport report, TextWriter output)
+    {
+        var s = report.Summary;
+        output.WriteLine($"codemetr-csharp {report.Command}: {(report.Passed ? "PASSED" : "FAILED")} - {s.Types} types in {s.Files} files, "
+            + $"{s.New} new, {s.Worsened} worsened, {s.Baselined} baselined, {s.Stale} stale, {s.ParseErrors} parse errors");
+        foreach (var error in report.ParseErrors)
+            output.WriteLine($"{error.File}:{error.Line}: parse error {error.Id}: {error.Message}");
+        foreach (var v in report.Violations)
+        {
+            output.WriteLine($"{v.File}:{v.Line}: [{v.Status}] {v.Rule}: {v.Message}");
+            if (v.Status != Codemetr.CSharp.CheckedViolation.Baselined) output.WriteLine($"    hint: {v.Hint}");
+        }
+        foreach (var entry in report.Stale)
+            output.WriteLine($"{entry.File}: [stale] {entry.Rule} {entry.Type}{(entry.Member is null ? "" : "." + entry.Member)}: {entry.Message}");
+        if (report.Hotspots.Count > 0)
+        {
+            output.WriteLine("Hotspots:");
+            for (var index = 0; index < report.Hotspots.Count; index++) output.WriteLine($"  {index + 1}. {report.Hotspots[index]}");
+        }
+        if (report.BaselineWritten is not null) output.WriteLine($"Baseline written: {report.BaselineWritten}");
+    }
+}

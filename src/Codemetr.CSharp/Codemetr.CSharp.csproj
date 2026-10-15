@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Codemetr.CSharp</PackageId>
+    <Description>Roslyn-based C# code metrics per type and member (cyclomatic complexity, maintainability index, class coupling, depth of inheritance, nesting, size) with a configurable guard and ratchet baseline.</Description>
+    <PackageTags>code-metrics;roslyn;cyclomatic-complexity;maintainability-index;guard</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+    <InternalsVisibleTo Include="Codemetr.CSharp.Tests" />
+  </ItemGroup>
+</Project>
