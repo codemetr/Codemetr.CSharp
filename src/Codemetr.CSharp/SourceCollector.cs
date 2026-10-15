@@ -15,7 +15,8 @@ public static class SourceCollector
     /// Reads every <c>*.cs</c> below the given paths. With <paramref name="lenient"/> (file lists such as
     /// <c>git diff --name-only</c>) missing paths and non-C# files are skipped instead of failing.
     /// </summary>
-    public static IReadOnlyList<SourceDocument> Collect(string root, IEnumerable<string> paths, IReadOnlyCollection<string> exclude, bool lenient = false)
+    public static IReadOnlyList<SourceDocument> Collect(string root, IEnumerable<string> paths, IReadOnlyCollection<string> exclude,
+        bool lenient = false, ICollection<string>? skipped = null)
     {
         root = Path.GetFullPath(root);
         var matcher = new Matcher(StringComparison.Ordinal);
@@ -33,11 +34,11 @@ public static class SourceCollector
         foreach (var file in files)
         {
             var relative = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
-            if (exclude.Count > 0 && matcher.Match(relative).HasMatches) continue;
-            if (GeneratedSuffixes.Any(suffix => file.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))) continue;
+            if ((exclude.Count > 0 && matcher.Match(relative).HasMatches)
+                || GeneratedSuffixes.Any(suffix => file.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))) { skipped?.Add(relative); continue; }
             if (new FileInfo(file).Length > MaximumFileBytes) throw new InvalidDataException($"Source file exceeds {MaximumFileBytes} bytes: {relative}");
             var text = File.ReadAllText(file);
-            if (IsGenerated(text)) continue;
+            if (IsGenerated(text)) { skipped?.Add(relative); continue; }
             documents.Add(new SourceDocument(relative, text));
         }
         return documents;
@@ -70,6 +71,16 @@ public static class SourceCollector
         matcher.AddIncludePatterns(exclude);
         return matcher.Match(document.Path).HasMatches;
     }
+
+    /// <summary>True for a path inside a folder that is never measured (build output, dependencies, VCS data).</summary>
+    public static bool IsInSkippedDirectory(string relativePath) =>
+        relativePath.Split('/').SkipLast(1).Any(segment => SkippedDirectories.Contains(segment, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>Every C# file below <paramref name="root"/>, skipped folders included (only .git is left out).</summary>
+    public static string[] EveryCSharpFile(string root) =>
+        Directory.EnumerateFiles(root, "*.cs", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = System.IO.FileAttributes.ReparsePoint })
+            .Where(file => !Path.GetRelativePath(root, file).Split(Path.DirectorySeparatorChar).Contains(".git"))
+            .Order(StringComparer.Ordinal).ToArray();
 
     static IEnumerable<string> Enumerate(string directory)
     {

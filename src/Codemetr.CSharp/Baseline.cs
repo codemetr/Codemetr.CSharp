@@ -91,7 +91,7 @@ public sealed record Baseline(int Schema, BaselineEntry[] Entries)
         var unverified = new List<BaselineEntry>();
         foreach (var entry in vanished)
         {
-            switch (scope.Judge(entry.File, entry.Type, fileExists))
+            switch (scope.Judge(entry, fileExists))
             {
                 case EntryJudgement.Fixed: stale.Add(new StaleEntry(entry, null)); break;
                 case EntryJudgement.Unmeasured: stale.Add(new StaleEntry(entry, null, Unmeasured: true)); break;

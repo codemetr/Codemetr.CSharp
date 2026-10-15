@@ -32,15 +32,7 @@ internal static class ClassCoupling
             if (symbol is null && name is IdentifierNameSyntax { IsVar: true } or IdentifierNameSyntax { IsNint: true }
                     or IdentifierNameSyntax { IsNuint: true } or IdentifierNameSyntax { IsUnmanaged: true } or IdentifierNameSyntax { IsNotNull: true })
                 continue;
-            var type = symbol switch
-            {
-                ITypeSymbol typeSymbol => typeSymbol,
-                IMethodSymbol { ReducedFrom: { } extension } => extension.ContainingType,
-                IMethodSymbol or IPropertySymbol or IFieldSymbol or IEventSymbol => symbol.IsStatic || symbol.ContainingType?.IsExtension == true
-                    ? symbol.ContainingType
-                    : ReceiverType(name, model) ?? symbol.ContainingType,
-                _ => null,
-            };
+            var type = symbol is null ? null : ReferencedType(symbol, name, model);
             if (type is not null) Add(type, self, references);
             else if (symbol is null && LooksLikeTypeReference(name, inheritsUnresolved)) references.Add("?" + name.Identifier.ValueText);
         }
@@ -56,6 +48,18 @@ internal static class ClassCoupling
         SpecialType.System_Single, SpecialType.System_Double, SpecialType.System_String, SpecialType.System_IntPtr,
         SpecialType.System_UIntPtr, SpecialType.System_Void,
     ];
+
+    // The type a referenced symbol couples to: the type itself, the owner of a static or extension member,
+    // or the type an instance member is reached through.
+    static ITypeSymbol? ReferencedType(ISymbol symbol, SimpleNameSyntax name, SemanticModel model) => symbol switch
+    {
+        ITypeSymbol typeSymbol => typeSymbol,
+        IMethodSymbol { ReducedFrom: { } extension } => extension.ContainingType,
+        IMethodSymbol or IPropertySymbol or IFieldSymbol or IEventSymbol => symbol.IsStatic || symbol.ContainingType?.IsExtension == true
+            ? symbol.ContainingType
+            : ReceiverType(name, model) ?? symbol.ContainingType,
+        _ => null,
+    };
 
     static void Add(ITypeSymbol type, INamedTypeSymbol? self, ISet<string> references)
     {
