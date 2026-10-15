@@ -19,13 +19,11 @@ internal static class InheritanceDepth
             if (!visited.Add(current)) break;
             if (current.TypeKind == TypeKind.Error)
             {
-                if (!LooksLikeInterface(current.Name)) depth++;
+                if (!TypeName.LooksLikeInterface(current.Name)) depth++;
                 break;
             }
             depth++;
         }
         return depth;
     }
-
-    static bool LooksLikeInterface(string name) => name.Length > 1 && name[0] == 'I' && char.IsUpper(name[1]);
 }

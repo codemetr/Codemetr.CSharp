@@ -29,7 +29,8 @@ internal static class CodemetrService
         // The configured context is always compiled, so coupling and inheritance do not depend on which files a run selects.
         var all = CodeAnalyzer.Analyze(documents, SourceCollector.CollectContext(root, config.Context), request.Type, cancellationToken);
         var selected = all;
-        if (request.Type is not null && selected.Types.Count == 0 && all.ParseErrors.Count == 0)
+        warnings.AddRange(all.Warnings);
+        if (request.Type is not null && selected.Types.Count == 0 && all.ParseErrors.Count == 0 && documents.Count > 0)
             throw new InvalidDataException($"No analysed type matches '{request.Type}'");
         var violations = GuardEvaluator.Evaluate(selected.Types, config);
         var directories = paths.Select(path => Path.GetFullPath(path, root)).Where(Directory.Exists).Select(path => Relative(root, path));

@@ -3,6 +3,9 @@ namespace Codemetr.CSharp;
 /// <summary>Measured types plus documents that could not be measured.</summary>
 public sealed record AnalysisResult(IReadOnlyList<TypeMetrics> Types, IReadOnlyList<ParseError> ParseErrors, int DocumentCount)
 {
+    /// <summary>Conditions that make metrics less reliable without preventing them, such as duplicate type declarations.</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
+
     /// <summary>Restricts the result to types whose simple name, full name or full-name suffix equals <paramref name="query"/>.</summary>
     public AnalysisResult SelectTypes(string? query)
     {

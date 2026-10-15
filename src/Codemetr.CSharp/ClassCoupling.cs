@@ -7,7 +7,7 @@ namespace Codemetr.CSharp;
 /// <summary>
 /// Distinct types a type's own code references: declared types, created types, attributes and the
 /// containing types of called or accessed members (static and extension calls included); an instance
-/// member couples to the type it is reached through. Built-in types (int, string, object, Nullable, ...),
+/// member couples to the type it is reached through. Keyword types (int, string, object, void, ...), Nullable,
 /// tuples, type parameters, <c>nameof</c> operands and the type itself do not count.
 /// Names the semantic model cannot bind are kept with a leading '?' when they stand in a type position
 /// or as an upper-case receiver of a member access; the latter is skipped when the type's own base class
@@ -22,7 +22,7 @@ internal static class ClassCoupling
     public static IReadOnlyList<string> Collect(IEnumerable<SyntaxNode> roots, INamedTypeSymbol? self, SemanticModel model)
     {
         var references = new SortedSet<string>(StringComparer.Ordinal);
-        var inheritsUnresolved = self?.BaseType?.TypeKind == TypeKind.Error;
+        var inheritsUnresolved = self?.BaseType is { TypeKind: TypeKind.Error } unresolved && !TypeName.LooksLikeInterface(unresolved.Name);
         foreach (var name in roots.SelectMany(OwnSyntax.Nodes).OfType<SimpleNameSyntax>())
         {
             if (IsNameofOperand(name, model)) continue;
@@ -47,6 +47,16 @@ internal static class ClassCoupling
         return references.ToArray();
     }
 
+    // Only types with a C# keyword are free; IEnumerable<T>, IDisposable, DateTime and the like are real dependencies.
+    static readonly HashSet<SpecialType> KeywordTypes =
+    [
+        SpecialType.System_Object, SpecialType.System_Boolean, SpecialType.System_Char, SpecialType.System_SByte,
+        SpecialType.System_Byte, SpecialType.System_Int16, SpecialType.System_UInt16, SpecialType.System_Int32,
+        SpecialType.System_UInt32, SpecialType.System_Int64, SpecialType.System_UInt64, SpecialType.System_Decimal,
+        SpecialType.System_Single, SpecialType.System_Double, SpecialType.System_String, SpecialType.System_IntPtr,
+        SpecialType.System_UIntPtr, SpecialType.System_Void,
+    ];
+
     static void Add(ITypeSymbol type, INamedTypeSymbol? self, ISet<string> references)
     {
         switch (type)
@@ -57,7 +67,8 @@ internal static class ClassCoupling
             case INamedTypeSymbol { IsExtension: true, ContainingType: { } extensionOwner }: Add(extensionOwner, self, references); return;
             case INamedTypeSymbol named:
                 var definition = named.OriginalDefinition;
-                if (named.IsTupleType || named.IsAnonymousType || definition.SpecialType != SpecialType.None) return;
+                if (named.IsTupleType || named.IsAnonymousType || KeywordTypes.Contains(named.SpecialType)
+                    || definition.SpecialType == SpecialType.System_Nullable_T) return;
                 if (SymbolEqualityComparer.Default.Equals(definition, self)) return;
                 if (named.TypeKind == TypeKind.Error)
                 {

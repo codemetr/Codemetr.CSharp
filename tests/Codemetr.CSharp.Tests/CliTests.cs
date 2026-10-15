@@ -171,4 +171,12 @@ public sealed class CliTests
         dir.Write("codemetr.json", """{ "context": ["missing"] }""");
         Assert.Equal(2, (await Run("", "analyze", "--root", dir.Path)).Exit);
     }
+
+    [Fact]
+    public async Task AnEmptyFileListWithATypeFilterIsNotAnError()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("A.cs", "class A { }");
+        Assert.Equal(0, (await Run("", "check", "--files-from", "-", "--type", "A", "--root", dir.Path)).Exit);
+    }
 }
