@@ -6,5 +6,7 @@ internal static class Source
 
     public static TypeMetrics Type(string text, string name) => Analyze(text).Types.Single(type => type.Name == name);
 
-    public static MemberMetrics Member(string text, string type, string member) => Type(text, type).Members.Single(m => m.Name == member);
+    /// <summary>Member by name without signature, e.g. "M" for "M(int)"; the name must be unique in the type.</summary>
+    public static MemberMetrics Member(string text, string type, string member) =>
+        Type(text, type).Members.Single(m => m.Name == member || m.Name.StartsWith(member + "(", StringComparison.Ordinal));
 }

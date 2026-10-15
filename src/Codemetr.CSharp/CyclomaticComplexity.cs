@@ -9,6 +9,10 @@ internal static class CyclomaticComplexity
 {
     public static int Measure(SyntaxNode root) => 1 + OwnSyntax.Nodes(root).Count(IsDecision);
 
+    // `_` and `var x` match everything: the fall-through arm, not a decision.
+    static bool IsDiscard(PatternSyntax pattern) =>
+        pattern is DiscardPatternSyntax or VarPatternSyntax;
+
     static bool IsDecision(SyntaxNode node) => node switch
     {
         IfStatementSyntax or ForStatementSyntax or CommonForEachStatementSyntax or WhileStatementSyntax
@@ -16,7 +20,7 @@ internal static class CyclomaticComplexity
             or ConditionalExpressionSyntax or ConditionalAccessExpressionSyntax or WhenClauseSyntax
             or CatchFilterClauseSyntax => true,
         // A trailing discard arm is the fall-through path, not an extra decision.
-        SwitchExpressionArmSyntax arm => arm.Pattern is not DiscardPatternSyntax || arm.WhenClause is not null,
+        SwitchExpressionArmSyntax arm => !IsDiscard(arm.Pattern) || arm.WhenClause is not null,
         BinaryExpressionSyntax binary => binary.IsKind(SyntaxKind.LogicalAndExpression)
             || binary.IsKind(SyntaxKind.LogicalOrExpression) || binary.IsKind(SyntaxKind.CoalesceExpression),
         AssignmentExpressionSyntax assignment => assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression),

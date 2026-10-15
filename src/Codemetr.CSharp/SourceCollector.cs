@@ -44,6 +44,21 @@ public static class SourceCollector
         return documents;
     }
 
+    /// <summary>
+    /// Every C# file below the context directories as compilation context: generated code included (it declares
+    /// types that hand-written code uses), configuration excludes ignored, oversized files skipped.
+    /// </summary>
+    public static IReadOnlyList<SourceDocument> CollectContext(string root, IEnumerable<string> directories)
+    {
+        root = Path.GetFullPath(root);
+        return directories.Select(directory => Path.GetFullPath(directory, root))
+            .Select(directory => Directory.Exists(directory) ? directory : throw new DirectoryNotFoundException($"Context directory not found: {directory}"))
+            .SelectMany(Enumerate).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+            .Where(file => new FileInfo(file).Length <= MaximumFileBytes)
+            .Select(file => new SourceDocument(Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/'), File.ReadAllText(file)))
+            .ToArray();
+    }
+
     static IEnumerable<string> Enumerate(string directory)
     {
         foreach (var file in Directory.EnumerateFiles(directory, "*.cs")) yield return file;

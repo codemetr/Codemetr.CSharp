@@ -12,4 +12,5 @@ internal sealed record CodemetrReport(
     IReadOnlyList<Codemetr.CSharp.ParseError> ParseErrors,
     IReadOnlyList<string> Hotspots,
     IReadOnlyList<Codemetr.CSharp.TypeMetrics>? Types,
-    string? BaselineWritten = null);
+    string? BaselineWritten = null,
+    IReadOnlyList<string>? Warnings = null);

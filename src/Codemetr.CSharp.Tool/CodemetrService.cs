@@ -17,13 +17,24 @@ internal static class CodemetrService
         var root = Path.GetFullPath(request.Root);
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Root not found: {request.Root}");
         var config = LoadConfig(root, request.ConfigPath);
-        var documents = Collect(root, request, config);
-        var all = CodeAnalyzer.Analyze(documents, cancellationToken);
-        var selected = all.SelectTypes(request.Type);
+        var warnings = new List<string>();
+        var listed = request.ListedFiles.Select(path => path.Replace('\\', '/')).ToArray();
+        var paths = request.Paths.Count > 0 || !request.HasFileList ? (request.Paths.Count > 0 ? request.Paths : ["."]) : [];
+        var documents = Collect(root, paths, listed, config);
+        var missingListed = listed.Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) && !File.Exists(Path.GetFullPath(path, root)))
+            .Select(path => Relative(root, Path.GetFullPath(path, root))).ToArray();
+        var listedSources = listed.Count(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase));
+        if (listedSources > 0 && missingListed.Length == listedSources)
+            warnings.Add($"None of the {listedSources} listed C# files exists below {root}; check --root (file lists from git are relative to the repository root).");
+        // The configured context is always compiled, so coupling and inheritance do not depend on which files a run selects.
+        var all = CodeAnalyzer.Analyze(documents, SourceCollector.CollectContext(root, config.Context), request.Type, cancellationToken);
+        var selected = all;
         if (request.Type is not null && selected.Types.Count == 0 && all.ParseErrors.Count == 0)
             throw new InvalidDataException($"No analysed type matches '{request.Type}'");
         var violations = GuardEvaluator.Evaluate(selected.Types, config);
-        var scope = AnalysisScope.Of(documents, all, request.Type is not null);
+        var directories = paths.Select(path => Path.GetFullPath(path, root)).Where(Directory.Exists).Select(path => Relative(root, path));
+        var scope = new AnalysisScope(documents.Select(d => d.Path).Concat(missingListed),
+            request.Type is null ? null : selected.Types.Select(t => t.FullName), directories, all.ParseErrors.Select(e => e.File));
         var baselinePath = request.BaselinePath is null ? Path.Combine(root, Baseline.FileName) : Path.GetFullPath(request.BaselinePath, root);
         var baseline = File.Exists(baselinePath) ? Baseline.Load(baselinePath) : Baseline.Empty;
 
@@ -51,7 +62,7 @@ internal static class CodemetrService
         var passed = all.ParseErrors.Count == 0 && comparison.Passed;
         var includeTypes = command == Analyze || request.IncludeMetrics;
         return new CodemetrReport("codemetr-csharp", Version, command, passed, summary, rows, stale, all.ParseErrors,
-            Hotspots(selected.Types, request.Top), includeTypes ? selected.Types : null, written);
+            Hotspots(selected.Types, request.Top), includeTypes ? selected.Types : null, written, warnings.Count > 0 ? warnings : null);
     }
 
     static CodemetrConfig LoadConfig(string root, string? configPath)
@@ -61,17 +72,16 @@ internal static class CodemetrService
         return File.Exists(conventional) ? CodemetrConfig.Load(conventional) : new CodemetrConfig();
     }
 
-    static IReadOnlyList<SourceDocument> Collect(string root, CodemetrRequest request, CodemetrConfig config)
+    static IReadOnlyList<SourceDocument> Collect(string root, IReadOnlyList<string> paths, IReadOnlyList<string> listed, CodemetrConfig config)
     {
         var documents = new List<SourceDocument>();
-        if (request.Paths.Count > 0 || request.ListedFiles.Count == 0)
-            documents.AddRange(SourceCollector.Collect(root, request.Paths.Count > 0 ? request.Paths : ["."], config.Exclude));
-        if (request.ListedFiles.Count > 0)
-            documents.AddRange(SourceCollector.Collect(root, request.ListedFiles, config.Exclude, lenient: true));
-        var duplicate = documents.GroupBy(d => d.Path, StringComparer.Ordinal).FirstOrDefault(g => g.Count() > 1);
-        if (duplicate is not null) throw new InvalidDataException($"Source listed twice: {duplicate.Key}");
-        return documents;
+        if (paths.Count > 0) documents.AddRange(SourceCollector.Collect(root, paths, config.Exclude));
+        if (listed.Count > 0) documents.AddRange(SourceCollector.Collect(root, listed, config.Exclude, lenient: true));
+        return documents.DistinctBy(document => document.Path, StringComparer.Ordinal).ToArray();
     }
+
+    static string Relative(string root, string path) =>
+        Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/') is var relative && relative == "." ? "" : relative;
 
     // Hotspot order: complexity first, then coupling, inheritance, maintainability, size.
     static IReadOnlyList<string> Hotspots(IEnumerable<TypeMetrics> types, int top) => types

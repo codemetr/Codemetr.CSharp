@@ -11,7 +11,7 @@ public sealed class GuardTests
         var config = new CodemetrConfig { Rules = new GuardRules { MaxCyclomaticComplexity = 5 } };
         Assert.Empty(GuardEvaluator.Evaluate(Source.Analyze(Branches(4)).Types, config));
         var violation = Assert.Single(GuardEvaluator.Evaluate(Source.Analyze(Branches(5)).Types, config));
-        Assert.Equal((RuleIds.CyclomaticComplexity, "M", 6d, 5d), (violation.Rule, violation.Member, violation.Value, violation.Limit));
+        Assert.Equal((RuleIds.CyclomaticComplexity, "M(int)", 6d, 5d), (violation.Rule, violation.Member, violation.Value, violation.Limit));
         Assert.NotEmpty(violation.Hint);
 
         var fields = new CodemetrConfig { Rules = new GuardRules { MaxInstanceFields = 2 } };

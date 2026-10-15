@@ -6,10 +6,12 @@ namespace Codemetr.CSharp;
 
 /// <summary>
 /// Distinct types a type's own code references: declared types, created types, attributes and the
-/// containing types of called or accessed members (including static and extension calls).
-/// Built-in types (int, string, object, ...), tuples, type parameters and the type itself do not count.
+/// containing types of called or accessed members (static and extension calls included); an instance
+/// member couples to the type it is reached through. Built-in types (int, string, object, Nullable, ...),
+/// tuples, type parameters, <c>nameof</c> operands and the type itself do not count.
 /// Names the semantic model cannot bind are kept with a leading '?' when they stand in a type position
-/// or as the receiver of a member access starting with an upper-case letter.
+/// or as an upper-case receiver of a member access; the latter is skipped when the type's own base class
+/// is unresolved, because then inherited members would look like types.
 /// </summary>
 internal static class ClassCoupling
 {
@@ -17,12 +19,13 @@ internal static class ClassCoupling
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters);
 
-    public static IReadOnlyList<string> Collect(BaseTypeDeclarationSyntax declaration, SemanticModel model)
+    public static IReadOnlyList<string> Collect(IEnumerable<SyntaxNode> roots, INamedTypeSymbol? self, SemanticModel model)
     {
-        var self = model.GetDeclaredSymbol(declaration);
         var references = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (var name in OwnSyntax.Nodes(declaration).OfType<SimpleNameSyntax>())
+        var inheritsUnresolved = self?.BaseType?.TypeKind == TypeKind.Error;
+        foreach (var name in roots.SelectMany(OwnSyntax.Nodes).OfType<SimpleNameSyntax>())
         {
+            if (IsNameofOperand(name, model)) continue;
             var info = model.GetSymbolInfo(name);
             var symbol = info.Symbol ?? info.CandidateSymbols.FirstOrDefault();
             // 'var' and similar contextual keywords name an inferred type; when inference fails they are no reference.
@@ -33,13 +36,13 @@ internal static class ClassCoupling
             {
                 ITypeSymbol typeSymbol => typeSymbol,
                 IMethodSymbol { ReducedFrom: { } extension } => extension.ContainingType,
-                IMethodSymbol or IPropertySymbol or IFieldSymbol or IEventSymbol => symbol.IsStatic
+                IMethodSymbol or IPropertySymbol or IFieldSymbol or IEventSymbol => symbol.IsStatic || symbol.ContainingType?.IsExtension == true
                     ? symbol.ContainingType
                     : ReceiverType(name, model) ?? symbol.ContainingType,
                 _ => null,
             };
             if (type is not null) Add(type, self, references);
-            else if (symbol is null && LooksLikeTypeReference(name)) references.Add("?" + name.Identifier.ValueText);
+            else if (symbol is null && LooksLikeTypeReference(name, inheritsUnresolved)) references.Add("?" + name.Identifier.ValueText);
         }
         return references.ToArray();
     }
@@ -51,9 +54,10 @@ internal static class ClassCoupling
             case IArrayTypeSymbol array: Add(array.ElementType, self, references); return;
             case IPointerTypeSymbol pointer: Add(pointer.PointedAtType, self, references); return;
             case ITypeParameterSymbol or IDynamicTypeSymbol: return;
+            case INamedTypeSymbol { IsExtension: true, ContainingType: { } extensionOwner }: Add(extensionOwner, self, references); return;
             case INamedTypeSymbol named:
-                if (named.IsTupleType || named.IsAnonymousType || named.SpecialType != SpecialType.None) return;
                 var definition = named.OriginalDefinition;
+                if (named.IsTupleType || named.IsAnonymousType || definition.SpecialType != SpecialType.None) return;
                 if (SymbolEqualityComparer.Default.Equals(definition, self)) return;
                 if (named.TypeKind == TypeKind.Error)
                 {
@@ -66,13 +70,27 @@ internal static class ClassCoupling
     }
 
     // An instance member couples to the type it is reached through, not to the base class that happens to declare it.
-    static ITypeSymbol? ReceiverType(SimpleNameSyntax name, SemanticModel model) =>
-        name.Parent is MemberAccessExpressionSyntax access && access.Name == name ? model.GetTypeInfo(access.Expression).Type : null;
+    static ITypeSymbol? ReceiverType(SimpleNameSyntax name, SemanticModel model)
+    {
+        if (name.Parent is MemberAccessExpressionSyntax access && access.Name == name) return model.GetTypeInfo(access.Expression).Type;
+        if (name.Parent is not MemberBindingExpressionSyntax binding) return null;
+        // a?.B: the receiver is the expression of the conditional access whose WhenNotNull starts with this binding.
+        var conditional = binding.Ancestors().OfType<ConditionalAccessExpressionSyntax>()
+            .FirstOrDefault(candidate => candidate.WhenNotNull.Span.Contains(binding.Span));
+        var receiver = conditional is null ? null : model.GetTypeInfo(conditional.Expression).Type;
+        return receiver is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable
+            ? nullable.TypeArguments[0] : receiver;
+    }
 
-    static bool LooksLikeTypeReference(SimpleNameSyntax name)
+    static bool IsNameofOperand(SimpleNameSyntax name, SemanticModel model) =>
+        name.Ancestors().OfType<InvocationExpressionSyntax>().FirstOrDefault() is
+            { Expression: IdentifierNameSyntax { Identifier.ValueText: "nameof" } nameof }
+        && model.GetSymbolInfo(nameof).Symbol is null;
+
+    static bool LooksLikeTypeReference(SimpleNameSyntax name, bool inheritsUnresolved)
     {
         if (name.Parent is AttributeSyntax || SyntaxFacts.IsInTypeOnlyContext(name)) return true;
-        return name.Parent is MemberAccessExpressionSyntax access && access.Expression == name
+        return !inheritsUnresolved && name.Parent is MemberAccessExpressionSyntax access && access.Expression == name
             && char.IsUpper(name.Identifier.ValueText[0]);
     }
 }

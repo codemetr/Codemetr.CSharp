@@ -2,7 +2,11 @@ using Microsoft.CodeAnalysis;
 
 namespace Codemetr.CSharp;
 
-/// <summary>Number of base classes above a class, excluding System.Object. An unresolvable base counts once.</summary>
+/// <summary>
+/// Number of base classes above a class, excluding System.Object. An unresolvable base counts once, unless
+/// its name follows the interface convention (I + upper-case letter): Roslyn reports an unresolved first
+/// base-list entry as base class even when it is an interface.
+/// </summary>
 internal static class InheritanceDepth
 {
     public static int Measure(INamedTypeSymbol? type)
@@ -13,9 +17,15 @@ internal static class InheritanceDepth
         for (var current = type.BaseType; current is not null && current.SpecialType != SpecialType.System_Object; current = current.BaseType)
         {
             if (!visited.Add(current)) break;
+            if (current.TypeKind == TypeKind.Error)
+            {
+                if (!LooksLikeInterface(current.Name)) depth++;
+                break;
+            }
             depth++;
-            if (current.TypeKind == TypeKind.Error) break;
         }
         return depth;
     }
+
+    static bool LooksLikeInterface(string name) => name.Length > 1 && name[0] == 'I' && char.IsUpper(name[1]);
 }

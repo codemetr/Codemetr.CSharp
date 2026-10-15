@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -15,5 +16,7 @@ public static class CodemetrJson
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
+        // Reports are files and terminal output, not HTML: keep '<', '>' and '&' in type names readable.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 }

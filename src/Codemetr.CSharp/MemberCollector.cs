@@ -9,28 +9,55 @@ internal static class MemberCollector
     public static IReadOnlyList<MemberMetrics> Collect(BaseTypeDeclarationSyntax type)
     {
         var members = new List<MemberMetrics>();
-        if (type is not TypeDeclarationSyntax withMembers) return members;
-        foreach (var member in withMembers.Members)
+        if (type is TypeDeclarationSyntax withMembers) Collect(members, withMembers.Members, prefix: "");
+        return members;
+    }
+
+    /// <summary>Measures top-level statements as one member; their local functions are members of their own.</summary>
+    public static IReadOnlyList<MemberMetrics> CollectTopLevel(IReadOnlyList<GlobalStatementSyntax> statements)
+    {
+        var members = new List<MemberMetrics>();
+        var body = statements.Where(statement => statement.Statement is not LocalFunctionStatementSyntax).ToArray();
+        if (body.Length > 0)
+        {
+            var start = body[0].GetLocation().GetLineSpan().StartLinePosition.Line;
+            var end = body[^1].GetLocation().GetLineSpan().EndLinePosition.Line;
+            members.Add(new MemberMetrics(TopLevelName, "topLevel", start + 1, end - start + 1,
+                1 + body.Sum(statement => CyclomaticComplexity.Measure(statement) - 1), 0, body.Max(NestingDepth.Measure)));
+        }
+        foreach (var local in statements.Select(statement => statement.Statement).OfType<LocalFunctionStatementSyntax>())
+            Add(members, local, local.Identifier.ValueText + Signature(local.ParameterList), "localFunction", local.ParameterList.Parameters.Count);
+        return members;
+    }
+
+    public const string TopLevelName = "<top-level statements>";
+
+    static void Collect(List<MemberMetrics> members, SyntaxList<MemberDeclarationSyntax> declarations, string prefix)
+    {
+        foreach (var member in declarations)
         {
             switch (member)
             {
                 case BaseMethodDeclarationSyntax method when method.Body is not null || method.ExpressionBody is not null:
-                    Add(members, method, Name(method), Kind(method), method.ParameterList.Parameters.Count);
+                    Add(members, method, prefix + Name(method) + Signature(method.ParameterList), Kind(method), method.ParameterList.Parameters.Count);
                     break;
                 case BasePropertyDeclarationSyntax property:
-                    AddAccessors(members, property);
+                    AddAccessors(members, property, prefix);
+                    break;
+                case ExtensionBlockDeclarationSyntax block:
+                    Collect(members, block.Members, prefix + "extension" + (block.ParameterList is { } receiver ? Signature(receiver) : "()") + ".");
                     break;
             }
         }
-        return members;
     }
 
-    static void AddAccessors(List<MemberMetrics> members, BasePropertyDeclarationSyntax property)
+    static void AddAccessors(List<MemberMetrics> members, BasePropertyDeclarationSyntax property, string prefix)
     {
-        var name = property switch
+        var name = prefix + property switch
         {
             PropertyDeclarationSyntax p => p.Identifier.ValueText,
             EventDeclarationSyntax e => e.Identifier.ValueText,
+            IndexerDeclarationSyntax i => "this" + Signature(i.ParameterList),
             _ => "this[]",
         };
         var parameters = property is IndexerDeclarationSyntax indexer ? indexer.ParameterList.Parameters.Count : 0;
@@ -55,7 +82,16 @@ internal static class MemberCollector
         members.Add(Measure(node, name, kind, parameters));
         foreach (var local in node.DescendantNodes(child => child == node || child is not BaseTypeDeclarationSyntax)
                      .OfType<LocalFunctionStatementSyntax>())
-            members.Add(Measure(local, name + "." + local.Identifier.ValueText, "localFunction", local.ParameterList.Parameters.Count));
+            members.Add(Measure(local, name + "." + local.Identifier.ValueText + Signature(local.ParameterList), "localFunction", local.ParameterList.Parameters.Count));
+    }
+
+    // Parameter types make overloads distinct, so a member keeps its own identity in reports and baselines.
+    static string Signature(BaseParameterListSyntax parameters)
+    {
+        var types = string.Join(", ", parameters.Parameters.Select(parameter =>
+            string.Join(" ", parameter.Modifiers.Select(modifier => modifier.ValueText)
+                .Append(parameter.Type?.NormalizeWhitespace().ToString() ?? parameter.Identifier.ValueText))));
+        return parameters is BracketedParameterListSyntax ? "[" + types + "]" : "(" + types + ")";
     }
 
     static MemberMetrics Measure(SyntaxNode node, string name, string kind, int parameters)
