@@ -58,6 +58,19 @@ public static class SourceCollector
             .ToArray();
     }
 
+    /// <summary>
+    /// True for a document that no run would ever measure: build output, generated code or an excluded path.
+    /// Its types may still be compilation context.
+    /// </summary>
+    public static bool IsNeverMeasured(SourceDocument document, IReadOnlyCollection<string> exclude)
+    {
+        if (GeneratedSuffixes.Any(suffix => document.Path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) || IsGenerated(document.Text)) return true;
+        if (exclude.Count == 0) return false;
+        var matcher = new Matcher(StringComparison.Ordinal);
+        matcher.AddIncludePatterns(exclude);
+        return matcher.Match(document.Path).HasMatches;
+    }
+
     static IEnumerable<string> Enumerate(string directory)
     {
         foreach (var file in Directory.EnumerateFiles(directory, "*.cs")) yield return file;

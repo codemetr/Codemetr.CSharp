@@ -31,14 +31,20 @@ internal static class CodemetrService
         if (listedSources > 0 && missingListed.Length == listedSources)
             warnings.Add($"None of the {listedSources} listed C# files exists below {root}; check --root (file lists from git are relative to the repository root).");
         // The configured context is always compiled, so coupling and inheritance do not depend on which files a run selects.
-        var all = CodeAnalyzer.Analyze(documents, SourceCollector.CollectContext(root, config.Context), request.Type, cancellationToken);
+        var all = CodeAnalyzer.Analyze(documents, SourceCollector.CollectContext(root, config.Context), request.Type,
+            document => SourceCollector.IsNeverMeasured(document, config.Exclude), cancellationToken);
         warnings.AddRange(all.Warnings);
         if (request.Type is not null && all.Types.Count == 0 && all.ParseErrors.Count == 0 && documents.Count > 0)
             throw new InvalidDataException($"No analysed type matches '{request.Type}'");
         var violations = GuardEvaluator.Evaluate(all.Types, config);
         var directories = paths.Select(path => Path.GetFullPath(path, root)).Where(Directory.Exists).Select(path => Relative(root, path));
         var scope = new AnalysisScope(documents.Select(d => d.Path).Concat(missingListed),
-            request.Type is null ? null : all.Types.Select(t => t.FullName), directories, all.ParseErrors.Select(e => e.File));
+            request.Type is null ? null : all.Types.Select(t => t.FullName), directories, all.ParseErrors.Select(e => e.File))
+        {
+            Measured = documents.Select(d => d.Path).Except(all.ParseErrors.Select(e => e.File)).ToHashSet(StringComparer.Ordinal),
+            Uncertain = all.FilesWithInactiveCode.ToHashSet(StringComparer.Ordinal),
+            UnmeasuredTypes = all.UnmeasuredTypes,
+        };
         var baselinePath = request.BaselinePath is null ? Path.Combine(root, Baseline.FileName) : Path.GetFullPath(request.BaselinePath, root);
         var baseline = File.Exists(baselinePath) ? Baseline.Load(baselinePath) : Baseline.Empty;
 
@@ -51,15 +57,20 @@ internal static class CodemetrService
             if (all.ParseErrors.Count > 0) throw new InvalidDataException("Refusing to record a baseline while documents fail to parse");
             // An existing baseline only ever tightens; new or worse debt is refused, never recorded.
             refused = File.Exists(baselinePath) ? comparison.Violations.Where(item => item.Fails).ToArray() : [];
-            if (refused.Length == 0)
+            var unmeasured = comparison.Stale.Count(item => item.Unmeasured);
+            if (refused.Length == 0 && unmeasured == 0)
             {
                 baseline = File.Exists(baselinePath) ? baseline.Tighten(comparison) : Baseline.Initial(violations);
                 File.WriteAllText(baselinePath, JsonSerializer.Serialize(baseline, CodemetrJson.Options) + "\n");
                 written = baselinePath;
                 comparison = baseline.Compare(violations, scope, fileExists);
             }
-            else warnings.Add($"Baseline unchanged: an existing baseline only tightens, and {refused.Length} violation(s) are new or worse; fix them first.");
+            else warnings.Add($"Baseline unchanged: an existing baseline only tightens; {refused.Length} violation(s) are new or worse " +
+                $"and {unmeasured} recorded file(s) are no longer measured. Fix the violations and measure the files again first.");
         }
+        if (comparison.Unverified.Count > 0)
+            warnings.Add($"{comparison.Unverified.Count} recorded violation(s) could not be verified in this run (inactive #if code, or a deleted " +
+                "file in a file-list run); they stay in the baseline. A full run settles deleted files.");
         return Report(command, request, documents.Count, all, comparison, written, warnings);
     }
 
@@ -86,6 +97,7 @@ internal static class CodemetrService
 
     static string StaleMessage(StaleEntry item) => item switch
     {
+        { Unmeasured: true } => "Recorded file exists but is no longer measured (excluded, generated header or skipped); measure it again or have the owner re-create the baseline.",
         { MovedTo: { } target } => $"Recorded violation moved to {target}; run 'codemetr-csharp baseline' to update its path.",
         { CurrentValue: null } => "Recorded violation is fixed; run 'codemetr-csharp baseline' to remove it.",
         _ => "Recorded violation improved; run 'codemetr-csharp baseline' to tighten it.",

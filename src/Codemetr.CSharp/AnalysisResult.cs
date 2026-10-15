@@ -6,6 +6,12 @@ public sealed record AnalysisResult(IReadOnlyList<TypeMetrics> Types, IReadOnlyL
     /// <summary>Conditions that make metrics less reliable without preventing them, such as duplicate type declarations.</summary>
     public IReadOnlyList<string> Warnings { get; init; } = [];
 
+    /// <summary>Measured documents that contain inactive <c>#if</c> code, whose absence of a violation proves nothing.</summary>
+    public IReadOnlyList<string> FilesWithInactiveCode { get; init; } = [];
+
+    /// <summary>Full names of types declared only in context documents that were not measured (generated, excluded).</summary>
+    public IReadOnlySet<string> UnmeasuredTypes { get; init; } = new HashSet<string>();
+
     /// <summary>Restricts the result to types whose simple name, full name or full-name suffix equals <paramref name="query"/>.</summary>
     public AnalysisResult SelectTypes(string? query)
     {

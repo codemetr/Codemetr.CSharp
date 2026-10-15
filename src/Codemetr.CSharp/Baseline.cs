@@ -44,7 +44,7 @@ public sealed record Baseline(int Schema, BaselineEntry[] Entries)
         foreach (var stale in comparison.Stale)
         {
             var index = entries.IndexOf(stale.Entry);
-            if (index < 0) continue;
+            if (index < 0 || stale.Unmeasured) continue;
             if (stale.CurrentValue is null) entries.RemoveAt(index);
             else entries[index] = stale.Entry with { Value = stale.CurrentValue.Value, File = stale.MovedTo ?? stale.Entry.File };
         }
@@ -67,6 +67,7 @@ public sealed record Baseline(int Schema, BaselineEntry[] Entries)
     {
         var findings = new List<(int Index, CheckedViolation Finding)>();
         var stale = new List<StaleEntry>();
+        var vanished = new List<BaselineEntry>();
         var recorded = Entries.Where(entry => scope.Contains(entry.File, entry.Type))
             .ToLookup(entry => entry.Key, StringComparer.Ordinal);
         foreach (var group in violations.Select((violation, index) => (Violation: violation, Index: index)).GroupBy(item => item.Violation.Key, StringComparer.Ordinal))
@@ -82,32 +83,54 @@ public sealed record Baseline(int Schema, BaselineEntry[] Entries)
                 findings.Add((position, new(violation, Worse(violation.Rule, value, before) ? CheckedViolation.Worsened : CheckedViolation.Baselined, before)));
                 if (Worse(violation.Rule, before, value)) stale.Add(new(previous[index], value));
             }
-            stale.AddRange(previous.Skip(current.Length).Select(entry => new StaleEntry(entry, null)));
+            vanished.AddRange(previous.Skip(current.Length));
         }
         var violated = violations.Select(v => v.Key).ToHashSet(StringComparer.Ordinal);
-        stale.AddRange(recorded.Where(group => !violated.Contains(group.Key)).SelectMany(group => group).Select(entry => new StaleEntry(entry, null)));
-        if (fileExists is not null) MatchMoves(findings, stale, fileExists);
+        vanished.AddRange(recorded.Where(group => !violated.Contains(group.Key)).SelectMany(group => group));
+        // Only a proven fix may remove debt: unmeasured files fail, unverifiable ones stay as they are.
+        var unverified = new List<BaselineEntry>();
+        foreach (var entry in vanished)
+        {
+            switch (scope.Judge(entry.File, entry.Type, fileExists))
+            {
+                case EntryJudgement.Fixed: stale.Add(new StaleEntry(entry, null)); break;
+                case EntryJudgement.Unmeasured: stale.Add(new StaleEntry(entry, null, Unmeasured: true)); break;
+                default: unverified.Add(entry); break;
+            }
+        }
+        if (fileExists is not null) MatchMoves(findings, stale, unverified, fileExists);
         return new(findings.OrderBy(item => item.Index).Select(item => item.Finding).ToArray(),
-            stale.OrderBy(s => s.Entry.Key, StringComparer.Ordinal).ThenBy(s => s.Entry.Value).ToArray());
+            stale.OrderBy(s => s.Entry.Key, StringComparer.Ordinal).ThenBy(s => s.Entry.Value).ToArray()) { Unverified = unverified };
     }
 
     static bool Worse(string rule, double value, double than) => RuleIds.LowerIsWorse(rule) ? value < than : value > than;
 
-    static void MatchMoves(List<(int Index, CheckedViolation Finding)> findings, List<StaleEntry> stale, Func<string, bool> fileExists)
+    // Every file with top-level statements reports type Program: such entries carry no identity to follow.
+    const string AnonymousEntryType = "Program";
+
+    static void MatchMoves(List<(int Index, CheckedViolation Finding)> findings, List<StaleEntry> stale, List<BaselineEntry> unverified, Func<string, bool> fileExists)
     {
+        bool Moves(BaselineEntry entry, Violation violation) => entry.Rule == violation.Rule && entry.Type == violation.Type
+            && entry.Member == violation.Member && entry.File != violation.File
+            && !Worse(violation.Rule, violation.Value, entry.Value) && !fileExists(entry.File);
         for (var index = 0; index < findings.Count; index++)
         {
             var (position, finding) = findings[index];
-            if (finding.Status != CheckedViolation.New) continue;
             var violation = finding.Violation;
-            var origin = stale.FindIndex(candidate => candidate.CurrentValue is null && candidate.MovedTo is null
-                && candidate.Entry.Rule == violation.Rule && candidate.Entry.Type == violation.Type && candidate.Entry.Member == violation.Member
-                && candidate.Entry.File != violation.File && !Worse(violation.Rule, violation.Value, candidate.Entry.Value)
-                && !fileExists(candidate.Entry.File));
-            if (origin < 0) continue;
-            var entry = stale[origin].Entry;
+            if (finding.Status != CheckedViolation.New || violation.Type == AnonymousEntryType) continue;
+            BaselineEntry entry;
+            var fixedOrigin = stale.FindIndex(candidate => candidate is { CurrentValue: null, MovedTo: null, Unmeasured: false } && Moves(candidate.Entry, violation));
+            if (fixedOrigin >= 0) { entry = stale[fixedOrigin].Entry; stale.RemoveAt(fixedOrigin); }
+            else
+            {
+                // A deleted file in a file-list run is unverified; the rename target in the same run settles it.
+                var unverifiedOrigin = unverified.FindIndex(candidate => Moves(candidate, violation));
+                if (unverifiedOrigin < 0) continue;
+                entry = unverified[unverifiedOrigin];
+                unverified.RemoveAt(unverifiedOrigin);
+            }
             findings[index] = (position, new(violation, CheckedViolation.Baselined, entry.Value));
-            stale[origin] = new StaleEntry(entry, violation.Value, violation.File);
+            stale.Add(new StaleEntry(entry, violation.Value, violation.File));
         }
     }
 }

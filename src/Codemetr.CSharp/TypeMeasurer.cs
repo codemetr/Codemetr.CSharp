@@ -11,6 +11,9 @@ internal static class TypeMeasurer
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters);
 
+    /// <summary>The full name reported for a type symbol.</summary>
+    public static string FullName(INamedTypeSymbol symbol) => symbol.ToDisplayString(FullNameFormat);
+
     public static TypeMetrics Measure(BaseTypeDeclarationSyntax declaration, SemanticModel model, string file)
     {
         var symbol = model.GetDeclaredSymbol(declaration);

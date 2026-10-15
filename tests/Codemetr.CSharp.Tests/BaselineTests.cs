@@ -99,4 +99,15 @@ public sealed class BaselineTests
         var copied = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 8, "new/A.cs")], scope, fileExists: _ => true);
         Assert.Equal(CheckedViolation.New, Assert.Single(copied.Violations).Status);
     }
+
+    [Fact]
+    public void TighteningNeverRemovesAnEntryWhoseFileIsNoLongerMeasured()
+    {
+        var baseline = Baseline.Initial([V(RuleIds.CyclomaticComplexity, "T", 8)]);
+        var scope = new AnalysisScope(["a.cs"], null) { Measured = new HashSet<string>() };
+        var comparison = baseline.Compare([], scope, fileExists: _ => true);
+        Assert.True(Assert.Single(comparison.Stale).Unmeasured);
+        Assert.False(comparison.Passed);
+        Assert.Single(baseline.Tighten(comparison).Entries);
+    }
 }
