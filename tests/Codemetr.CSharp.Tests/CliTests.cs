@@ -81,4 +81,94 @@ public sealed class CliTests
         Assert.Equal(2, type.GetProperty("maxCyclomaticComplexity").GetInt32());
         Assert.Equal(2, (await Run("", "analyze", "--type", "Nope", "--root", dir.Path)).Exit);
     }
+
+    [Fact]
+    public async Task TypeSelectionNeitherDropsNorStalesTheDebtOfOtherTypes()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("codemetr.json", """{ "rules": { "maxCyclomaticComplexity": 3 } }""");
+        dir.Write("src/Both.cs", Complex.Replace("class Complex", "class A") + "\n" + Complex.Replace("class Complex", "class B"));
+        Assert.Equal(0, (await Run("", "baseline", "--root", dir.Path)).Exit);
+        Assert.Equal(0, (await Run("", "check", "--type", "A", "--root", dir.Path)).Exit);
+        Assert.Equal(0, (await Run("", "baseline", "--type", "A", "--root", dir.Path)).Exit);
+        Assert.Equal(["A", "B"], Baseline.Load(Path.Combine(dir.Path, "codemetr.baseline.json")).Entries.Select(e => e.Type).Order(StringComparer.Ordinal));
+        Assert.Equal(0, (await Run("", "check", "--root", dir.Path)).Exit);
+    }
+
+    [Fact]
+    public async Task OverloadsKeepSeparateBaselineEntries()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("codemetr.json", """{ "rules": { "maxCyclomaticComplexity": 3 } }""");
+        const string twoOverloads = "class O { int M(int a) { if (a == 1) return 1; if (a == 2) return 2; if (a == 3) return 3; return 0; } int M(string s) => s.Length; }";
+        dir.Write("O.cs", twoOverloads);
+        Assert.Equal(0, (await Run("", "baseline", "--root", dir.Path)).Exit);
+        dir.Write("O.cs", twoOverloads.Replace("int M(string s) => s.Length;", "int M(string s) { if (s == \"a\") return 1; if (s == \"b\") return 2; if (s == \"c\") return 3; return 0; }"));
+        var grown = await Run("", "check", "--root", dir.Path);
+        Assert.Equal(1, grown.Exit);
+        var violation = Json(grown.Out).GetProperty("violations").EnumerateArray().Single(v => v.GetProperty("status").GetString() == "new");
+        Assert.Equal("M(string)", violation.GetProperty("member").GetString());
+    }
+
+    [Fact]
+    public async Task DeletedFilesMakeTheirEntriesStaleAndEmptyFileListsCheckNothing()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("codemetr.json", """{ "rules": { "maxCyclomaticComplexity": 3 } }""");
+        var file = dir.Write("src/Complex.cs", Complex);
+        Assert.Equal(0, (await Run("", "baseline", "--root", dir.Path)).Exit);
+        Assert.Equal(0, (await Run("", "check", "--files-from", "-", "--root", dir.Path)).Exit);
+        Assert.Equal(0, Json((await Run("", "check", "--files-from", "-", "--root", dir.Path)).Out).GetProperty("summary").GetProperty("files").GetInt32());
+        File.Delete(file);
+        Assert.Contains("[stale]", (await Run("", "check", "--root", dir.Path, "--format", "text")).Out);
+        Assert.Contains("[stale]", (await Run("src\\Complex.cs\n", "check", "--files-from", "-", "--root", dir.Path, "--format", "text")).Out);
+    }
+
+    [Fact]
+    public async Task WrongRootForAFileListIsReportedAsAWarning()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("src/A.cs", "class A { }");
+        var result = await Run("src/A.cs\n", "check", "--files-from", "-", "--root", Path.Combine(dir.Path, "src"));
+        Assert.Contains("--root", Json(result.Out).GetProperty("warnings")[0].GetString());
+        Assert.Contains("warning", result.Err);
+    }
+
+    [Fact]
+    public async Task MalformedInputsExitWithTwoInsteadOfCrashing()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("A.cs", "class A { }");
+        dir.Write("codemetr.json", """{ "overrides": null }""");
+        Assert.Equal(2, (await Run("", "check", "--root", dir.Path)).Exit);
+        dir.Write("codemetr.json", "{ }");
+        dir.Write("codemetr.baseline.json", """{ "schema": 1, "entries": [ null ] }""");
+        Assert.Equal(2, (await Run("", "check", "--root", dir.Path)).Exit);
+        File.Delete(Path.Combine(dir.Path, "codemetr.baseline.json"));
+        Assert.Equal(2, (await Run("", "check", "--files-from", dir.Path, "--root", dir.Path)).Exit);
+    }
+
+    [Fact]
+    public async Task ReportKeepsGenericTypeNamesReadable()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("A.cs", "class Repo<T> { }");
+        Assert.Contains("\"Repo<T>\"", (await Run("", "analyze", "--root", dir.Path)).Out);
+    }
+
+    [Fact]
+    public async Task ConfiguredContextKeepsAnotherCodeTreeOutOfTypeResolution()
+    {
+        using var dir = new TempDirectory();
+        dir.Write("app/Repo.cs", "namespace App; public class Repo { public static Repo Open() => new(); }");
+        dir.Write("app/Service.cs", "namespace App; class Service { void M() { var r = Repo.Open(); } }");
+        dir.Write("legacy/Repo.cs", "namespace App; public class Repo { }");
+        string Coupling(string output) => string.Join(",", Json(output).GetProperty("types").EnumerateArray()
+            .Single(t => t.GetProperty("name").GetString() == "Service").GetProperty("coupledTypes").EnumerateArray().Select(e => e.GetString()));
+        dir.Write("codemetr.json", """{ "context": ["app"] }""");
+        Assert.Equal("App.Repo", Coupling((await Run("", "analyze", "app/Service.cs", "--root", dir.Path)).Out));
+        Assert.Equal("App.Repo", Coupling((await Run("app/Service.cs\n", "analyze", "--files-from", "-", "--root", dir.Path)).Out));
+        dir.Write("codemetr.json", """{ "context": ["missing"] }""");
+        Assert.Equal(2, (await Run("", "analyze", "--root", dir.Path)).Exit);
+    }
 }

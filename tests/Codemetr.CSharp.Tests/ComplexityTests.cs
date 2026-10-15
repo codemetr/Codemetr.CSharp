@@ -43,10 +43,12 @@ public sealed class ComplexityTests
             {
                 int S(int a) { switch (a) { case 1: return 1; case 2: case 3: return 2; case > 9 when a < 20: return 3; default: return 0; } }
                 int E(int a) => a switch { 1 => 1, 2 => 2, _ => 0 };
+                int V(int a) => a switch { 1 => 1, var _ => 0 };
             }
             """;
         Assert.Equal(1 + 3 + 1 + 1, Source.Member(code, "C", "S").CyclomaticComplexity);
         Assert.Equal(1 + 2, Source.Member(code, "C", "E").CyclomaticComplexity);
+        Assert.Equal(1 + 1, Source.Member(code, "C", "V").CyclomaticComplexity);
     }
 
     [Fact]
@@ -64,10 +66,10 @@ public sealed class ComplexityTests
             }
             """;
         var type = Source.Type(code, "C");
-        Assert.Equal(2, type.Members.Single(m => m.Name == "M").CyclomaticComplexity);
-        Assert.Equal(3, type.Members.Single(m => m.Name == "M.Local").CyclomaticComplexity);
-        Assert.Equal("localFunction", type.Members.Single(m => m.Name == "M.Local").Kind);
-        Assert.Equal("M.Local", type.MostComplexMember);
+        Assert.Equal(2, type.Members.Single(m => m.Name == "M(int)").CyclomaticComplexity);
+        Assert.Equal(3, type.Members.Single(m => m.Name == "M(int).Local(int)").CyclomaticComplexity);
+        Assert.Equal("localFunction", type.Members.Single(m => m.Name == "M(int).Local(int)").Kind);
+        Assert.Equal("M(int).Local(int)", type.MostComplexMember);
     }
 
     [Fact]

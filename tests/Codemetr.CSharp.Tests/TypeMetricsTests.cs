@@ -49,8 +49,8 @@ public sealed class TypeMetricsTests
             }
             """;
         var members = Source.Type(code, "C").Members.Select(m => (m.Name, m.Kind)).ToArray();
-        Assert.Equal([(".cctor", "constructor"), (".ctor", "constructor"), ("P.get", "accessor"), ("P.set", "accessor"),
-            ("Q.get", "accessor"), ("this[].get", "accessor"), ("operator +", "operator")], members);
+        Assert.Equal([(".cctor()", "constructor"), (".ctor(int, int)", "constructor"), ("P.get", "accessor"), ("P.set", "accessor"),
+            ("Q.get", "accessor"), ("this[int].get", "accessor"), ("operator +(C, C)", "operator")], members);
         Assert.Equal(2, Source.Type(code, "C").ConstructorParameterCount);
     }
 
@@ -70,6 +70,7 @@ public sealed class TypeMetricsTests
             class C : B, System.IDisposable { public void Dispose() { } }
             class E : System.InvalidOperationException { }
             class U : MissingBase { }
+            class J : IUnknown { }
             interface I : System.IDisposable { }
             """;
         var types = Source.Analyze(code).Types.ToDictionary(t => t.Name, t => t.DepthOfInheritance);
@@ -77,6 +78,7 @@ public sealed class TypeMetricsTests
         Assert.Equal(2, types["C"]);
         Assert.Equal(3, types["E"]); // InvalidOperationException, SystemException, Exception (System.Object excluded)
         Assert.Equal(1, types["U"]);
+        Assert.Equal(0, types["J"]); // unresolved IUnknown is taken for an interface, not a base class
         Assert.Equal(0, types["I"]);
     }
 

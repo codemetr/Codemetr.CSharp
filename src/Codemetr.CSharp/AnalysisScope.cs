@@ -1,20 +1,33 @@
 namespace Codemetr.CSharp;
 
-/// <summary>Which files and types a run actually looked at; baseline staleness is judged only inside it.</summary>
-public sealed class AnalysisScope(IEnumerable<string> files, IEnumerable<string>? types)
+/// <summary>
+/// Which files and types a run judged; baseline entries outside it are neither reported stale nor dropped.
+/// A file is inside when it was analysed, when it lies below an analysed directory (so entries of deleted
+/// files become stale), or when a file list named it although it no longer exists. Files that failed to
+/// parse are always outside: their recorded debt must survive until they parse again.
+/// </summary>
+public sealed class AnalysisScope
 {
-    readonly HashSet<string> files = new(files, StringComparer.Ordinal);
-    readonly HashSet<string>? types = types is null ? null : new(types, StringComparer.Ordinal);
+    readonly HashSet<string> files;
+    readonly string[] directories;
+    readonly HashSet<string> unparsed;
+    readonly HashSet<string>? types;
 
-    /// <summary>Scope of an analysis result after an optional type selection.</summary>
-    /// <remarks>Documents with parse errors are outside the scope: their recorded debt is neither dropped nor reported stale.</remarks>
-    public static AnalysisScope Of(IReadOnlyList<SourceDocument> documents, AnalysisResult result, bool typeSelected)
+    /// <param name="files">Report paths that were analysed or explicitly listed.</param>
+    /// <param name="types">Selected full type names, or null for every type.</param>
+    /// <param name="directories">Analysed directories as report paths; an empty string is the whole root.</param>
+    /// <param name="unparsed">Report paths of documents with syntax errors.</param>
+    public AnalysisScope(IEnumerable<string> files, IEnumerable<string>? types, IEnumerable<string>? directories = null, IEnumerable<string>? unparsed = null)
     {
-        var unparsed = result.ParseErrors.Select(error => error.File).ToHashSet(StringComparer.Ordinal);
-        return new(documents.Select(d => d.Path).Where(path => !unparsed.Contains(path)),
-            typeSelected ? result.Types.Select(t => t.FullName) : null);
+        this.files = new(files, StringComparer.Ordinal);
+        this.types = types is null ? null : new(types, StringComparer.Ordinal);
+        this.directories = (directories ?? []).Select(directory => directory.TrimEnd('/')).ToArray();
+        this.unparsed = new(unparsed ?? [], StringComparer.Ordinal);
     }
 
-    /// <summary>True when the entry's file was analysed and, with a type selection, its type was selected.</summary>
-    public bool Contains(string file, string type) => files.Contains(file) && (types is null || types.Contains(type));
+    /// <summary>True when the entry's file was judged by this run and, with a type selection, its type was selected.</summary>
+    public bool Contains(string file, string type) =>
+        !unparsed.Contains(file)
+        && (files.Contains(file) || directories.Any(directory => directory.Length == 0 || file.StartsWith(directory + "/", StringComparison.Ordinal)))
+        && (types is null || types.Contains(type));
 }

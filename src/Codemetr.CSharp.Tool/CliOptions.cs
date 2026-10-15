@@ -39,6 +39,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
         var top = CodemetrService.DefaultTop;
         var paths = new List<string>();
         var listed = new List<string>();
+        var hasFileList = false;
         for (var index = 1; index < args.Length; index++)
         {
             string Value() => index + 1 < args.Length && !string.IsNullOrWhiteSpace(args[index + 1])
@@ -59,6 +60,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
                     break;
                 case "--files-from":
                     var source = Value();
+                    hasFileList = true;
                     var lines = source == "-" ? ReadLines(stdin) : File.ReadAllLines(source);
                     listed.AddRange(lines.Select(line => line.Trim()).Where(line => line.Length > 0));
                     break;
@@ -70,7 +72,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
         }
         return new CliOptions(command, new CodemetrRequest
         {
-            Root = root, Paths = paths, ListedFiles = listed, Type = type, ConfigPath = config, BaselinePath = baseline,
+            Root = root, Paths = paths, ListedFiles = listed, HasFileList = hasFileList, Type = type, ConfigPath = config, BaselinePath = baseline,
             IncludeMetrics = includeMetrics, Top = top,
         }, format);
     }

@@ -52,14 +52,41 @@ public sealed class CouplingTests
     public void UnresolvedTypesAreKeptWithAQuestionMark()
     {
         const string code = """
-            class C : ExternalBase
+            class C
             {
                 Widget? w;
                 void M() { var x = Factory.Create(); Assert.True(x); }
             }
             """;
-        var coupled = Source.Type(code, "C").CoupledTypes;
-        Assert.Equal(["?Assert", "?ExternalBase", "?Factory", "?Widget"], coupled);
+        Assert.Equal(["?Assert", "?Factory", "?Widget"], Source.Type(code, "C").CoupledTypes);
+    }
+
+    [Fact]
+    public void InheritedMembersOfAnUnresolvedBaseAreNotTakenForTypes()
+    {
+        const string code = """
+            class OrdersController : ControllerBase
+            {
+                object Get(Widget w) { if (!ModelState.IsValid) return BadRequest(); return Request.Path; }
+            }
+            """;
+        Assert.Equal(["?ControllerBase", "?Widget"], Source.Type(code, "OrdersController").CoupledTypes);
+    }
+
+    [Fact]
+    public void NullableNameofAndConditionalAccessFollowTheReceiver()
+    {
+        const string code = """
+            class Base { public int Total; }
+            class Order : Base { }
+            class C
+            {
+                int A(int? n) => n.HasValue ? n.Value : 0;
+                string B() => nameof(System.IO.File);
+                int D(Order? o) => o?.Total ?? 0;
+            }
+            """;
+        Assert.Equal(["Order"], Source.Type(code, "C").CoupledTypes);
     }
 
     [Fact]

@@ -7,8 +7,7 @@ public sealed record AnalysisResult(IReadOnlyList<TypeMetrics> Types, IReadOnlyL
     public AnalysisResult SelectTypes(string? query)
     {
         if (string.IsNullOrWhiteSpace(query)) return this;
-        var selected = Types.Where(type => type.Name == query || type.FullName == query
-            || type.FullName.EndsWith("." + query, StringComparison.Ordinal)).ToArray();
+        var selected = Types.Where(type => TypeName.Matches(type, query, allowSuffix: true)).ToArray();
         return this with { Types = selected };
     }
 }

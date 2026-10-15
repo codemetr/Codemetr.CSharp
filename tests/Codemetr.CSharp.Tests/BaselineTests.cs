@@ -39,11 +39,34 @@ public sealed class BaselineTests
     }
 
     [Fact]
-    public void LoadRejectsUnknownSchemaAndDuplicates()
+    public void LoadRejectsUnknownSchemaAndIncompleteEntries()
     {
         using var dir = new TempDirectory();
         Assert.Throws<InvalidDataException>(() => Baseline.Load(dir.Write("a.json", """{ "schema": 2, "entries": [] }""")));
-        var entry = """{ "rule": "parameters", "type": "T", "member": "M", "file": "a.cs", "value": 9 }""";
-        Assert.Throws<InvalidDataException>(() => Baseline.Load(dir.Write("b.json", $$"""{ "schema": 1, "entries": [ {{entry}}, {{entry}} ] }""")));
+        Assert.Throws<InvalidDataException>(() => Baseline.Load(dir.Write("b.json", """{ "schema": 1, "entries": [ null ] }""")));
+        Assert.Throws<InvalidDataException>(() => Baseline.Load(dir.Write("c.json", """{ "schema": 1, "entries": [ { "rule": "parameters", "file": "a.cs", "value": 9 } ] }""")));
+    }
+
+    [Fact]
+    public void SharedKeysAreMatchedAsAMultisetSoNoViolationHidesBehindAnother()
+    {
+        // Two same-named local functions in one method share a key.
+        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "T", 9), V(RuleIds.CyclomaticComplexity, "T", 6)], AllOfA);
+        Assert.Equal(2, baseline.Entries.Length);
+        Assert.True(baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 6), V(RuleIds.CyclomaticComplexity, "T", 9)], AllOfA).Passed);
+        var grown = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 9), V(RuleIds.CyclomaticComplexity, "T", 9)], AllOfA);
+        Assert.Equal([CheckedViolation.Baselined, CheckedViolation.Worsened], grown.Violations.Select(v => v.Status));
+        var third = baseline.Compare([V(RuleIds.CyclomaticComplexity, "T", 9), V(RuleIds.CyclomaticComplexity, "T", 6), V(RuleIds.CyclomaticComplexity, "T", 6)], AllOfA);
+        Assert.Single(third.Violations, v => v.Status == CheckedViolation.New);
+    }
+
+    [Fact]
+    public void EntriesBelowAnAnalysedDirectoryBecomeStaleWhenTheirFileIsGone()
+    {
+        var baseline = Baseline.Empty.Record([V(RuleIds.CyclomaticComplexity, "Gone", 8, "src/Gone.cs"), V(RuleIds.CyclomaticComplexity, "Kept", 8, "lib/Kept.cs")],
+            new AnalysisScope(["src/Gone.cs", "lib/Kept.cs"], null));
+        var comparison = baseline.Compare([], new AnalysisScope([], null, directories: ["src"]));
+        Assert.Equal(["Gone"], comparison.Stale.Select(s => s.Entry.Type));
+        Assert.True(baseline.Compare([], new AnalysisScope(["src/Gone.cs"], null, unparsed: ["src/Gone.cs"])).Passed);
     }
 }

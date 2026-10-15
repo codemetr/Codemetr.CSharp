@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore --locked-mode
+      - run: dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true
+      - run: dotnet test -c Release --no-build
+      - run: dotnet pack -c Release --no-build -o artifacts
+      - name: Guard own sources
+        run: dotnet src/Codemetr.CSharp.Tool/bin/Release/net10.0/Codemetr.CSharp.Tool.dll check src --format text
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/*.nupkg
