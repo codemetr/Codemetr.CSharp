@@ -24,14 +24,31 @@ on the repository visibility and GitHub plan.
 
 ## One-time NuGet setup
 
-1. On nuget.org, create an API key scoped to pushing new versions of
-   `Codemetr.CSharp.Tool`. For the first publication, ensure the key also permits
-   creating that package. The account must own or be allowed to create the ID.
-2. In GitHub **Settings > Environments**, create an environment named `nuget`.
+1. On nuget.org, open **Trusted Publishing** and create a GitHub Actions policy:
+   - Package owner: the NuGet organization `codemetr`.
+   - Repository owner: `codemetr`; repository: `Codemetr.CSharp`.
+   - Workflow file: `release.yml` (file name only).
+   - Environment: `nuget`.
+   - Package glob: `Codemetr.CSharp.Tool` (not `*`).
+   - Scopes: push new packages and package versions, to allow the first release.
+2. In GitHub **Settings > Environments**, use the environment named `nuget`.
 3. Restrict deployment branches to `main`. Optionally require a deployment
    reviewer if another maintainer is available.
-4. Add the API key as environment secret `NUGET_API_KEY`. Rotate it before expiry;
-   never put it in the repository or workflow inputs.
+4. Add environment secret `NUGET_USER`: your personal NuGet profile name, not
+   your email address or the organization name. This user must have publishing
+   permissions for the package owner and match the policy's NuGet identity.
+
+```powershell
+gh secret set NUGET_USER --env nuget --repo codemetr/Codemetr.CSharp
+```
+
+The release job requests a GitHub OIDC token and exchanges it through
+`NuGet/login` for a temporary NuGet API key immediately before publishing.
+No persistent `NUGET_API_KEY` secret is needed. Remove any old API-key secret
+and revoke its key on nuget.org if one was previously created. The login action
+is pinned to a commit for supply-chain safety.
+
+See [NuGet Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing).
 
 ## Publish a version
 
