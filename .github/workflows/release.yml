@@ -1,0 +1,65 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'NuGet version (for example 0.1.0 or 0.2.0-rc.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nuget-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: nuget
+    env:
+      PACKAGE_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Validate package version
+        shell: bash
+        run: |
+          if [[ ! "$PACKAGE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo '::error::Use a version such as 0.1.0 or 0.2.0-rc.1.'
+            exit 1
+          fi
+      - run: dotnet restore --locked-mode
+      - name: Build
+        run: dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true -p:Version="$PACKAGE_VERSION"
+      - run: dotnet test -c Release --no-build
+      - name: Guard own sources
+        run: dotnet src/Codemetr.CSharp.Tool/bin/Release/net10.0/Codemetr.CSharp.Tool.dll check src --format text
+      - name: Pack tool
+        run: dotnet pack src/Codemetr.CSharp.Tool/Codemetr.CSharp.Tool.csproj -c Release --no-build -p:ContinuousIntegrationBuild=true -p:Version="$PACKAGE_VERSION" -o artifacts
+      - name: Smoke-test packaged tool
+        shell: bash
+        run: |
+          printf '%s\n' '<configuration><packageSources><clear /></packageSources></configuration>' > "$RUNNER_TEMP/smoke-nuget.config"
+          dotnet tool install Codemetr.CSharp.Tool --tool-path "$RUNNER_TEMP/codemetr-tool" --configfile "$RUNNER_TEMP/smoke-nuget.config" --add-source "$GITHUB_WORKSPACE/artifacts" --version "$PACKAGE_VERSION" --no-cache
+          "$RUNNER_TEMP/codemetr-tool/codemetr-csharp" --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tool-${{ inputs.version }}
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+      - name: Publish tool to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "$NUGET_API_KEY" ]]; then
+            echo '::error::Configure NUGET_API_KEY in the nuget environment.'
+            exit 1
+          fi
+          dotnet nuget push "artifacts/Codemetr.CSharp.Tool.$PACKAGE_VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
