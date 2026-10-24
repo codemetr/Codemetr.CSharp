@@ -14,6 +14,10 @@ works on a developer machine, in a pre-commit hook and in CI.
 
 Requires .NET 10.
 
+Installation from nuget.org does not require the source code. The package must
+first be published; see [branch protection and releases](.github/RELEASING.md)
+for repository setup and the manual deployment workflow.
+
 ## Install and run
 
 ```bash
