@@ -18,6 +18,9 @@ concurrency:
 jobs:
   publish:
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     environment: nuget
     env:
@@ -53,13 +56,23 @@ jobs:
           name: tool-${{ inputs.version }}
           path: artifacts/*.nupkg
           if-no-files-found: error
-      - name: Publish tool to NuGet
+      - name: Validate NuGet identity
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_USER: ${{ secrets.NUGET_USER }}
         shell: bash
         run: |
-          if [[ -z "$NUGET_API_KEY" ]]; then
-            echo '::error::Configure NUGET_API_KEY in the nuget environment.'
+          if [[ -z "$NUGET_USER" ]]; then
+            echo '::error::Configure NUGET_USER in the nuget environment with your personal NuGet profile name (not an email or organization name).'
             exit 1
           fi
+      - name: NuGet login (OIDC)
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Publish tool to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        shell: bash
+        run: |
           dotnet nuget push "artifacts/Codemetr.CSharp.Tool.$PACKAGE_VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
