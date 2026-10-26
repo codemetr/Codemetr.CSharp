@@ -1,0 +1,27 @@
+{
+  "verifiedUtc": "2026-10-26T15:32:22.411945+00:00",
+  "rulesetId": 25798318,
+  "enforcement": "active",
+  "bypassActors": [],
+  "requiredStatusChecks": {
+    "strict_required_status_checks_policy": true,
+    "do_not_enforce_on_create": false,
+    "required_status_checks": [
+      {
+        "context": "build",
+        "integration_id": 15368
+      },
+      {
+        "context": "Codacy Static Code Analysis",
+        "integration_id": 56611
+      }
+    ]
+  },
+  "existingProtectionRulesPreserved": true,
+  "baselineMissesCodacyGate": true,
+  "currentRequiredAppBindingsVerified": true,
+  "annotationSource": "https://github.com/codemetr/Codemetr.CSharp/blob/08bcb1c533c8e78be27821ad3b97a12b4c91509d/.github/workflows/release.yml",
+  "actionsAddedOrDispatched": false,
+  "analyzerRulesDisabled": false,
+  "historicalFindingIgnoredInCodacy": false
+}
