@@ -36,6 +36,14 @@ workflow has no other issues. No secret-detector rule, engine, workflow exclusio
 or repository-wide threshold is changed by this disposition. No historical Codacy
 check has been edited or claimed green. An analyzer-side ignore is not claimed.
 
+**Codacy resolution status: unresolved.** This entry is a retrospective exception
+assessment of an already merged PR. It does **not** satisfy the repository's new
+false-positive resolution process: there is no analyzer-side resolution or fresh
+passing check for the historical finding. It cannot retroactively repair the old
+merge or authorize another merge with that finding still blocking. The new gate
+and workflow apply to future PRs; a passing check on this documentation PR is not
+a reanalysis or resolution of the historical PR #2 check.
+
 ## Process repair
 
 The existing main ruleset previously required only `build`. It now also requires
@@ -44,3 +52,22 @@ The unchanged PR and up-to-date requirements remain. A future red finding must b
 fixed or resolved specifically in the analyzer after a recorded evidence-based
 assessment, followed by a fresh successful check before merge. This note is not
 a bypass credential and cannot authorize merging another red check.
+
+## Reproduce the read-only verification
+
+Run these commands with a GitHub account allowed to read the repository:
+
+```sh
+gh api repos/codemetr/Codemetr.CSharp/rulesets/25798318
+gh api repos/codemetr/Codemetr.CSharp/rules/branches/main
+gh api repos/codemetr/Codemetr.CSharp/check-runs/120996124003/annotations
+gh pr checks 3 --repo codemetr/Codemetr.CSharp
+```
+
+Confirm active enforcement, an empty bypass list, strict branch freshness and
+both exact check/app pairs from `required-checks-verified.json`. The historical
+annotation identifies the original workflow source; compare line 23 with the
+primary references above. For future PRs, replace the PR number in the last
+command and inspect that PR's current-head reviews and unresolved threads too.
+The checked-in verification file records an observation, not a promise that
+remote settings or future checks cannot change.
