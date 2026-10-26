@@ -8,8 +8,12 @@ Workflow files alone do not enforce branch protection. In GitHub, open
 - Set enforcement to **Active** and leave the bypass list empty.
 - Enable **Require a pull request before merging**. Required approvals can be
   zero for a solo maintainer; requiring an approval needs another reviewer.
-- Enable **Require status checks to pass** and select the `build` job from the
-  `ci` workflow (GitHub Actions). Run CI once if the check is not yet selectable.
+- Enable **Require status checks to pass** for both checks and their expected apps:
+  - `build` from **GitHub Actions** (app ID `15368`).
+  - `Codacy Static Code Analysis` from **Codacy Production** (app ID `56611`).
+  A missing or still-running analysis is not a pass. Select the check after it has
+  actually reported in this repository; do not accept an identically named check
+  from a different publisher.
 - Enable **Require branches to be up to date before merging**.
 - Enable **Block force pushes** and **Restrict deletions**.
 
@@ -17,6 +21,24 @@ Do not enable "Restrict updates": it would also prevent normal PR merges unless
 a bypass is allowed. CI runs for every pull request without path filters, for
 pushes to `main`, and for merge queues (`merge_group`). Keep the `build` job name
 stable, or update the required status check when renaming it.
+
+## Bot finding disposition before merge
+
+Inspect checks **and** bot reviews for the current head before merging. Wait for
+an enabled reviewer to finish; the review may arrive after its static-analysis
+check. Recheck after a new commit. Fix a valid finding and obtain fresh checks.
+
+For a false positive, record the exact finding and affected source revision,
+explain why it does not apply, and link primary evidence. Use the analyzer's
+supported issue-specific ignore/resolution with that reason, then wait for a new
+passing check. A repository note alone does not turn a failed check into success.
+Never disable the analyzer, exclude a whole workflow, remove the required status,
+or spoof a check just to merge. Keep substantive review dispositions separate
+from check conclusions and resolve outstanding review threads.
+
+See [the historical OIDC finding](review-decisions/codacy-pr-2-oidc.md).
+A job-scoped OIDC permission is not a credential, but that specific conclusion
+must not suppress future genuine secrets or overbroad permissions.
 
 These settings prevent direct pushes, including by administrators without a
 bypass. Administrators can still change the ruleset itself. Availability depends
