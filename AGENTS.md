@@ -9,7 +9,10 @@ release work.
   publish a synthetic successful status for another tool.
 - Before merge, inspect current-head checks, review submissions and unresolved
   review threads. A green build alone is insufficient. Wait for enabled bot
-  reviews on the current head; a pending review is not an empty successful review.
+  reviews to finish and verify the reviewed commit; a pending review is not an
+  empty successful review. For later commits, examine the delta and qualify any
+  necessary follow-up review. An earlier review is not automatic approval of
+  changes it never examined.
 - Both required checks must pass: `build` from GitHub Actions and
   `Codacy Static Code Analysis` from the Codacy app. Missing, pending, failed,
   cancelled or action-required checks prohibit merge. Recheck after every push
