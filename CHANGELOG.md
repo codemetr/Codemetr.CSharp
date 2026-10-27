@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 - unreleased
+## 0.1.0 - 2026-10-27
 
 - Add logical partial-type metrics with declaration/member provenance and an explicit opt-in aggregate guard.
 - Expose compilation diagnostics, unresolved names and incomplete context files without claiming project completeness.

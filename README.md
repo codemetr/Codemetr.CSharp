@@ -14,14 +14,14 @@ works on a developer machine, in a pre-commit hook and in CI.
 
 Requires .NET 10.
 
-Installation from nuget.org does not require the source code. The package must
-first be published; see [branch protection and releases](.github/RELEASING.md)
-for repository setup and the manual deployment workflow.
+Install version **0.1.0** from nuget.org without a source checkout. See
+[branch protection and releases](.github/RELEASING.md) for the manual publication
+workflow. Tool and marketplace-plugin versions are independent.
 
 ## Install and run
 
 ```bash
-dotnet tool install --global Codemetr.CSharp.Tool
+dotnet tool install --global Codemetr.CSharp.Tool --version 0.1.0
 
 codemetr-csharp analyze src --format text          # metrics + hotspots, always exit 0 unless input error
 codemetr-csharp check src                          # guard, JSON report, exit 1 on findings
@@ -43,7 +43,7 @@ cannot produce optimistic metrics.
 
 ## Logical types and additional advisory measurements
 
-The development version adds whole-partial-type measurements and analysis limits,
+Version 0.1.0 adds whole-partial-type measurements and analysis limits,
 directed dependencies and cycle witnesses, per-member cognitive complexity,
 state-based cohesion groups, and explicit Stryker JSON score import:
 
@@ -55,8 +55,9 @@ bash scripts/check-metrics.sh  # self guard using the pinned published NuGet too
 Definitions, supported syntax, scope restrictions and the opt-in partial guard are
 specified in [measurement definitions](docs/measurement-definitions.md). New metrics
 are advisory; existing declaration reports, baseline identities and default guard
-thresholds remain. These features require a new published version before consumer
-use; the 0.0.1 self guard is a separate quality check of this repository.
+thresholds remain. Use the [runnable examples](examples/README.md) to inspect these report fields.
+The pinned 0.0.1 self guard is a separate quality check of this repository; it
+does not exercise the new measurements and is not upgraded by installing 0.1.0.
 
 ## Metrics
 
