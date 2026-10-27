@@ -1,9 +1,9 @@
 # ExecPlan 004-cohesion: State-based cohesion
 
 Owner: codex
-Status: in_progress
+Status: done
 Created: 2026-10-27T07:06:58Z
-Updated: 2026-10-27T07:36:02Z
+Updated: 2026-10-27T07:40:19Z
 
 ## Purpose and evidence
 
@@ -20,7 +20,7 @@ Report connected groups of instance methods linked by shared instance fields or 
 - [x] M1: Freeze definitions and regression fixtures with positive/negative controls.
 - [x] M2: Implement the bounded change, documentation and scope/provenance output.
 - [x] M3: Run regression tests and the published NuGet self guard; resolve findings.
-- [ ] M4: Review the measured diff, record dispositions, PR to main and inspect current-head checks and bot reviews before merge.
+- [x] M4: Review the measured diff, record dispositions, PR to main and inspect current-head checks and bot reviews before merge.
 
 ## Acceptance
 
@@ -41,3 +41,5 @@ Use the task full clone on `feature/measurement-integrity-and-metrics`. Heavy ru
 - 2026-10-27T07:31:09Z: Independent correction review accepted bce2a61. Bot-review dispositions and three extra controls implemented; 117 tests and published full/diff guards pass. Integration remains tracked in PR 4; no NuGet release or consumer upgrade is claimed.
 
 - 2026-10-27T07:36:02Z: Final local validation: 119 tests pass; published full guard measures 64 production types with zero findings. Compiler diagnostic fields explicitly count compilation errors (including context syntax diagnostics). A discovered test helper ambiguity with nested locals is corrected and covered without weakening actual-overload checks.
+
+- 2026-10-27T07:40:19Z: Completed via PR 4, merged at API timestamp `2026-10-27T07:39:24Z` as aa29ea4592c262f5bacdc3424517f2a5cb39531b. Final source head e69e881 passed current-head GitHub Actions build and Codacy checks; all four bot threads have individual dispositions and are resolved. Opposite reviewers accepted algorithm corrections, and the final mechanical metadata/test-helper delta has regression coverage. All actionable implementation findings are fixed; no new default thresholds, baseline reset or consumer upgrade. Local result: 119 tests pass, published NuGet 0.0.1 self guard passes 64 production types with zero findings. Package publication remains the existing separate manual release operation.
