@@ -96,7 +96,7 @@ public sealed class AdvisoryMetricsTests
     {
         var result = Source.Analyze("class A { int x; void M() { } void M() { } }");
         Assert.Single(result.Types);
-        Assert.True(result.Completeness!.SemanticErrorCount > 0);
+        Assert.True(result.Completeness!.CompilationErrorCount > 0);
         Assert.False(result.Cohesion.Single().Applicable);
         Assert.Contains("ambiguous", result.Cohesion.Single().Reason);
     }

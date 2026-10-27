@@ -10,7 +10,7 @@ internal static class AdvisoryTextReport
         if (report.Completeness is { } completeness)
         {
             output.WriteLine($"Analysis scope: {completeness.Scope}");
-            output.WriteLine($"Analysis limits: {completeness.SemanticErrorCount} semantic errors, {completeness.UnresolvedTypes.Count} unresolved coupling names, "
+            output.WriteLine($"Analysis limits: {completeness.CompilationErrorCount} compilation errors, {completeness.UnresolvedTypes.Count} unresolved coupling names, "
                 + $"{completeness.UnmeasuredPartialDeclarations.Count} unmeasured partial parts, {completeness.InactiveFiles.Count} files with inactive code");
         }
         foreach (var type in report.WholeTypes ?? [])

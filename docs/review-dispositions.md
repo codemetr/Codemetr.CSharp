@@ -47,3 +47,5 @@ Validation after corrections: 114 tests pass; official NuGet 0.0.1 self guard pa
 63 production source types with zero findings, no baseline and unchanged thresholds.
 
 - 2026-10-27T07:31:09Z: Both independent roles accepted the corrections at bce2a61 with no remaining material blocker. Bot findings are individually disposed in `.github/review-decisions/codacy-pr-4-metrics.md`. Added context-file limits, generic SCC self-loop support and workflow order/feed regression controls. Validation: 117 tests pass; published NuGet full guard passes 64 production types and diff guard passes four changed production types (three excluded test files), zero findings.
+
+- 2026-10-27T07:36:02Z: Last delta is mechanical diagnostic-field precision (`CompilationErrorCount`/`CompilationErrorIds`, matching Roslyn GetDiagnostics) plus a test-helper selection fix and two controls. Production metric algorithms unchanged. Final local suite: 119 passing tests; published full guard: 64 production types, zero findings.
