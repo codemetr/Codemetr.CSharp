@@ -31,7 +31,8 @@ internal static class ReportBuilder
         var passed = parseErrors.Count == 0 && comparison.Passed;
         var includeTypes = command == CodemetrService.Analyze || request.IncludeMetrics;
         return new CodemetrReport(ReportSchema, "codemetr-csharp", CodemetrService.Version, command, passed, summary, rows, stale, parseErrors,
-            Hotspots(result.Types, request.Top), includeTypes ? result.Types : null, written, warnings.Count > 0 ? warnings : null);
+            Hotspots(result.Types, request.Top), includeTypes ? result.Types : null, written, warnings.Count > 0 ? warnings : null, includeTypes ? result.WholeTypes : null, result.Completeness,
+            result.Dependencies, result.Cohesion);
     }
 
     // Hotspot order: complexity first, then coupling, inheritance, maintainability, size.

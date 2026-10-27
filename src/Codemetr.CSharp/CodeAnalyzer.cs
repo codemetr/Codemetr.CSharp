@@ -22,7 +22,12 @@ public static class CodeAnalyzer
     /// <param name="typeQuery">When set, only declarations whose simple name can match are measured (see <see cref="AnalysisResult.SelectTypes"/>).</param>
     /// <param name="cancellationToken">Cancels parsing and measuring.</param>
     public static AnalysisResult Analyze(IReadOnlyList<SourceDocument> documents, IReadOnlyList<SourceDocument>? context = null,
-        string? typeQuery = null, CancellationToken cancellationToken = default)
+        string? typeQuery = null, CancellationToken cancellationToken = default) =>
+        Analyze(documents, context, typeQuery, cancellationToken, []);
+
+    /// <summary>Analyses with explicit exclusions for logical partial-type measurements; excluded parts stay context only.</summary>
+    public static AnalysisResult Analyze(IReadOnlyList<SourceDocument> documents, IReadOnlyList<SourceDocument>? context,
+        string? typeQuery, CancellationToken cancellationToken, IReadOnlyCollection<string> excluded)
     {
         ArgumentNullException.ThrowIfNull(documents);
         var errors = new List<ParseError>();
@@ -69,11 +74,14 @@ public static class CodeAnalyzer
                 if (DuplicateDeclaration(compilation, model, declaration, cancellationToken) is { } duplicate) duplicates.Add(duplicate);
             }
         });
+        foreach (var tree in contextTrees)
+            if (tree.GetRoot(cancellationToken).DescendantTrivia().Any(trivia => trivia.IsKind(SyntaxKind.DisabledTextTrivia) && !string.IsNullOrWhiteSpace(trivia.ToString())))
+                inactive.Add(tree.FilePath);
         var result = new AnalysisResult(
             types.OrderBy(type => type.Metrics.File, StringComparer.Ordinal).ThenBy(type => type.Start).Select(type => type.Metrics).ToArray(),
             errors, documents.Count) { Warnings = duplicates.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Concat(InactiveWarning(inactive)).ToArray(),
             FilesWithInactiveCode = inactive.Order(StringComparer.Ordinal).ToArray() };
-        return result.SelectTypes(typeQuery);
+        return AnalysisEnrichment.Apply(compilation, result, excluded, typeQuery, cancellationToken);
     }
 
     // Roslyn merges a type declared twice (not as partial parts) into one symbol with several declarations,

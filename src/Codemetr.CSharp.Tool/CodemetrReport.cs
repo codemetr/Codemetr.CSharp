@@ -14,4 +14,9 @@ internal sealed record CodemetrReport(
     IReadOnlyList<string> Hotspots,
     IReadOnlyList<Codemetr.CSharp.TypeMetrics>? Types,
     string? BaselineWritten = null,
-    IReadOnlyList<string>? Warnings = null);
+    IReadOnlyList<string>? Warnings = null,
+    IReadOnlyList<Codemetr.CSharp.TypeMetrics>? WholeTypes = null,
+    Codemetr.CSharp.AnalysisCompleteness? Completeness = null,
+    Codemetr.CSharp.DependencyGraph? Dependencies = null,
+    IReadOnlyList<Codemetr.CSharp.CohesionMetrics>? Cohesion = null,
+    MutationReport? Mutation = null);

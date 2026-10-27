@@ -2,6 +2,12 @@
 
 ## 0.1.0 - unreleased
 
+- Add logical partial-type metrics with declaration/member provenance and an explicit opt-in aggregate guard.
+- Expose compilation diagnostics, unresolved names and incomplete context files without claiming project completeness.
+- Add scope-labelled directed coupling, type/namespace cycle witnesses, a documented cognitive-complexity heuristic and instance-state cohesion groups.
+- Import mutation-testing-elements v1/v2 scoring subsets with exact report digest and no final score for empty/pending runs.
+- Guard production sources using a pinned published NuGet tool in local, CI and release paths.
+
 - Library `Codemetr.CSharp`: Roslyn metrics per type and member (cyclomatic complexity, nesting depth,
   parameters, maintainability index, class coupling with type names, depth of inheritance, size).
 - Configurable rules with file and type overrides, exclusions, inclusive limits.

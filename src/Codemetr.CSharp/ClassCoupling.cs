@@ -19,7 +19,7 @@ internal static class ClassCoupling
         typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
         genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters);
 
-    public static IReadOnlyList<string> Collect(IEnumerable<SyntaxNode> roots, INamedTypeSymbol? self, SemanticModel model)
+    public static IReadOnlyList<string> Collect(IEnumerable<SyntaxNode> roots, INamedTypeSymbol? self, SemanticModel model, bool strictBinding = false)
     {
         var references = new SortedSet<string>(StringComparer.Ordinal);
         var inheritsUnresolved = self?.BaseType is { TypeKind: TypeKind.Error } unresolved && !TypeName.LooksLikeInterface(unresolved.Name);
@@ -27,7 +27,7 @@ internal static class ClassCoupling
         {
             if (IsNameofOperand(name, model)) continue;
             var info = model.GetSymbolInfo(name);
-            var symbol = info.Symbol ?? info.CandidateSymbols.FirstOrDefault();
+            var symbol = info.Symbol ?? (strictBinding ? null : info.CandidateSymbols.FirstOrDefault());
             // 'var' and similar contextual keywords name an inferred type; when inference fails they are no reference.
             if (symbol is null && name is IdentifierNameSyntax { IsVar: true } or IdentifierNameSyntax { IsNint: true }
                     or IdentifierNameSyntax { IsNuint: true } or IdentifierNameSyntax { IsUnmanaged: true } or IdentifierNameSyntax { IsNotNull: true })
