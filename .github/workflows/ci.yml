@@ -22,7 +22,7 @@ jobs:
       - run: dotnet test -c Release --no-build
       - run: dotnet pack -c Release --no-build -o artifacts
       - name: Guard own sources
-        run: dotnet src/Codemetr.CSharp.Tool/bin/Release/net10.0/Codemetr.CSharp.Tool.dll check src --format text
+        run: bash scripts/check-metrics.sh
       - uses: actions/upload-artifact@v4
         with:
           name: packages

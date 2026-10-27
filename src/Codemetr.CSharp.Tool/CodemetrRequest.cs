@@ -13,5 +13,6 @@ internal sealed record CodemetrRequest
     public string? ConfigPath { get; init; }
     public string? BaselinePath { get; init; }
     public bool IncludeMetrics { get; init; }
+    public string? MutationReport { get; init; }
     public int Top { get; init; } = CodemetrService.DefaultTop;
 }

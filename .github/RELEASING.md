@@ -77,8 +77,10 @@ See [NuGet Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org
 1. Merge the intended changes into `main` through a passing PR.
 2. Open **Actions > release > Run workflow**, select `main`, and enter a new
    version, for example `0.1.0` or `0.2.0-rc.1`.
-3. The workflow builds and tests the solution, checks its own sources, packs only
-   the tool, installs it locally for a smoke test, and pushes it to nuget.org.
+3. The workflow builds and tests the solution, checks its own sources with the pinned published NuGet tool, packs only
+   the tool, smoke-tests the pinned published guard, and pushes the new package to nuget.org.
+Candidate behavior is covered by the regression suite; no development tool is
+installed from a local package feed.
 
 The supplied version overrides `Directory.Build.props` for the release build
 and package. NuGet versions cannot be overwritten: use a new version for every

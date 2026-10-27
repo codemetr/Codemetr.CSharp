@@ -38,6 +38,9 @@ public sealed class AnalysisScope
     /// <summary>Measured paths whose inactive #if code may hide a violation.</summary>
     public IReadOnlySet<string> Uncertain { get; init; } = new HashSet<string>();
 
+    /// <summary>Counterpart-only files where only selected logical types, not unrelated declarations, were measured.</summary>
+    public IReadOnlyDictionary<string, IReadOnlySet<string>> RestrictedFileTypes { get; init; } = new Dictionary<string, IReadOnlySet<string>>();
+
     /// <summary>Where types are declared outside the measured files; without it, no move out of sight is detected.</summary>
     public DeclarationIndex? Declarations { get; init; }
 
@@ -76,5 +79,6 @@ public sealed class AnalysisScope
     public bool Contains(string file, string type) =>
         !unparsed.Contains(file)
         && (files.Contains(file) || directories.Any(directory => Below(file, directory)))
-        && (types is null || types.Contains(type));
+        && (types is null || types.Contains(type))
+        && (!RestrictedFileTypes.TryGetValue(file, out var selected) || selected.Contains(type));
 }
