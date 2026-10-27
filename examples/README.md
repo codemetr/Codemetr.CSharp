@@ -10,6 +10,10 @@ codemetr-csharp analyze src --root examples/metrics --mutation-report synthetic-
 codemetr-csharp check src --root examples/metrics --include-metrics --format json
 ```
 
+Paths supplied to these commands, including `synthetic-mutation.json`, are
+relative to the selected `--root examples/metrics`, not the shell working
+directory. Do not prepend `examples/metrics` to the mutation path again.
+
 An existing global installation can be updated deliberately with
 `dotnet tool update --global Codemetr.CSharp.Tool --version 0.1.0`. Respect a
 consuming repository's pinned version; do not silently replace it. This example
