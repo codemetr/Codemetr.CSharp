@@ -7,4 +7,8 @@ public sealed record AnalysisCompleteness(
     IReadOnlyList<string> SemanticErrorIds,
     IReadOnlyList<string> UnresolvedTypes,
     IReadOnlyList<MetricDeclaration> UnmeasuredPartialDeclarations,
-    IReadOnlyList<string> InactiveFiles);
+    IReadOnlyList<string> InactiveFiles)
+{
+    /// <summary>All context files with known unmeasured code, even if no declaration can safely be attributed to a selected type.</summary>
+    public IReadOnlyList<AnalysisFileLimit> ContextFilesWithLimits { get; init; } = [];
+}

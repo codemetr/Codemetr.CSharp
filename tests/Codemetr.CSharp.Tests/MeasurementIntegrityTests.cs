@@ -101,4 +101,16 @@ public sealed class MeasurementIntegrityTests
         Assert.Equal(1, result.WholeTypes.Single().PublicMethodCount);
     }
 
+    [Fact]
+    public void EntirelyDisabledOrUnrecognizableContextIsDisclosedWithoutGuessingTypeIdentity()
+    {
+        var result = CodeAnalyzer.Analyze([new SourceDocument("a.cs", "partial class A { }")], [
+            new SourceDocument("disabled.cs", "#if HIDDEN\npartial class A { void M() { } }\n#endif"),
+            new SourceDocument("broken.cs", "partial class { void M( {")]);
+        var limits = result.Completeness!.ContextFilesWithLimits;
+        Assert.True(limits.Single(file => file.File == "disabled.cs").HasInactiveCode);
+        Assert.True(limits.Single(file => file.File == "broken.cs").HasSyntaxErrors);
+        Assert.Empty(result.WholeTypes.Single().Members);
+    }
+
 }
