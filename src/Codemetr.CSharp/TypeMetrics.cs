@@ -37,4 +37,13 @@ public sealed record TypeMetrics(
     int ConstructorParameterCount,
     int PublicMethodCount,
     int InstanceFieldCount,
-    IReadOnlyList<MemberMetrics> Members);
+    IReadOnlyList<MemberMetrics> Members)
+{
+    /// <summary>Coupling names from successful binding only; unresolved names remain explicitly prefixed.</summary>
+    public IReadOnlyList<string> StrictCoupledTypes { get; init; } = [];
+    /// <summary>Declared namespace, excluding containing type names.</summary>
+    public string Namespace { get; init; } = "";
+
+    /// <summary>All source locations contributing to this measurement.</summary>
+    public IReadOnlyList<MetricDeclaration> Declarations { get; init; } = [];
+}

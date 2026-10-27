@@ -1,9 +1,9 @@
 # ExecPlan 001-measurement-integrity: Measurement integrity and partial types
 
 Owner: codex
-Status: ready
+Status: in_progress
 Created: 2026-10-27T07:06:58Z
-Updated: 2026-10-27T07:06:58Z
+Updated: 2026-10-27T07:19:52Z
 
 ## Purpose and evidence
 
@@ -17,8 +17,8 @@ Group actual partial declarations by Roslyn symbol. Measure all available contex
 
 ## Milestones
 
-- [ ] M1: Freeze definitions and regression fixtures with positive/negative controls.
-- [ ] M2: Implement the bounded change, documentation and scope/provenance output.
+- [x] M1: Freeze definitions and regression fixtures with positive/negative controls.
+- [x] M2: Implement the bounded change, documentation and scope/provenance output.
 - [ ] M3: Run regression tests and the published NuGet self guard; resolve findings.
 - [ ] M4: Review the measured diff, record dispositions, PR to main and inspect current-head checks and bot reviews before merge.
 
@@ -33,3 +33,5 @@ Use the task full clone on `feature/measurement-integrity-and-metrics`. Heavy ru
 ## Progress, decisions and results
 
 - 2026-10-27T07:06:58Z: Owner authorized plans and implementation, including CodeMetr itself as guard.
+
+- 2026-10-27T07:19:52Z: Definitions and regression controls implemented. Existing declaration reports/guards stay compatible; whole-type guard is explicit opt-in with per-file thresholds. Published 0.0.1 self guard remains separate from development algorithm tests. Final validation and independent diff review underway.

@@ -3,6 +3,16 @@ namespace Codemetr.CSharp;
 /// <summary>Measured types plus documents that could not be measured.</summary>
 public sealed record AnalysisResult(IReadOnlyList<TypeMetrics> Types, IReadOnlyList<ParseError> ParseErrors, int DocumentCount)
 {
+    /// <summary>Whole measurable partial types; declaration-level Types remains unchanged.</summary>
+    public IReadOnlyList<TypeMetrics> WholeTypes { get; init; } = [];
+    /// <summary>Source-only analysis limits, including unresolved references.</summary>
+    public AnalysisCompleteness? Completeness { get; init; }
+
+    /// <summary>Advisory, scope-labelled dependency graph.</summary>
+    public DependencyGraph? Dependencies { get; init; }
+    /// <summary>Advisory instance-state cohesion.</summary>
+    public IReadOnlyList<CohesionMetrics> Cohesion { get; init; } = [];
+
     /// <summary>Conditions that make metrics less reliable without preventing them, such as duplicate type declarations.</summary>
     public IReadOnlyList<string> Warnings { get; init; } = [];
 
@@ -14,6 +24,10 @@ public sealed record AnalysisResult(IReadOnlyList<TypeMetrics> Types, IReadOnlyL
     {
         if (string.IsNullOrWhiteSpace(query)) return this;
         var selected = Types.Where(type => TypeName.Matches(type, query, allowSuffix: true)).ToArray();
-        return this with { Types = selected };
+        var whole = WholeTypes.Where(type => TypeName.Matches(type, query, allowSuffix: true)).ToArray();
+        return this with { Types = selected, WholeTypes = whole,
+            Dependencies = Dependencies is null ? null : DependencyGraph.Build(whole,
+                Dependencies.Types.Select(node => node.Type).Concat(Dependencies.Types.SelectMany(node => node.ContextTypes)).ToArray()),
+            Cohesion = Cohesion.Where(item => whole.Any(type => type.FullName == item.Type)).ToArray() };
     }
 }

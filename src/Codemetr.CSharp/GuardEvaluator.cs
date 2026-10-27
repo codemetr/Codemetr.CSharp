@@ -3,6 +3,14 @@ namespace Codemetr.CSharp;
 /// <summary>Compares measured types with the effective rules of a configuration.</summary>
 public static class GuardEvaluator
 {
+    /// <summary>Whole-type values are checked at every measured partial site, preserving file overrides and member provenance.</summary>
+    public static IReadOnlyList<Violation> EvaluateWhole(IEnumerable<TypeMetrics> types, CodemetrConfig config) =>
+        types.SelectMany(type => type.Declarations.Count == 0 ? Evaluate([type], config)
+            : type.Declarations.Where(site => site.Measured).DistinctBy(site => site.File)
+                .SelectMany(site => Evaluate([type with { File = site.File, Line = site.Line,
+                    Members = type.Members.Where(member => member.File == site.File).ToArray() }], config)))
+            .Distinct().OrderBy(violation => violation.File, StringComparer.Ordinal).ThenBy(violation => violation.Line).ToArray();
+
     /// <summary>All violations, ordered by file, line, rule and member.</summary>
     public static IReadOnlyList<Violation> Evaluate(IEnumerable<TypeMetrics> types, CodemetrConfig config)
     {
@@ -35,7 +43,7 @@ public static class GuardEvaluator
                 void MemberMax(string rule, int value, int? limit, string what)
                 {
                     if (limit is { } max && value > max)
-                        violations.Add(new(rule, type.FullName, member.Name, type.File, member.Line, value, max,
+                        violations.Add(new(rule, type.FullName, member.Name, member.File ?? type.File, member.Line, value, max,
                             $"{type.FullName}.{member.Name}: {what} {value} exceeds max {max}."));
                 }
                 MemberMax(RuleIds.CyclomaticComplexity, member.CyclomaticComplexity, rules.MaxCyclomaticComplexity, "cyclomatic complexity");

@@ -9,6 +9,9 @@ public sealed record CodemetrConfig
     /// <summary>Conventional file name looked up in the analysis root.</summary>
     public const string FileName = "codemetr.json";
 
+    /// <summary>Explicitly use whole measurable partial-type values for guard checks; defaults to declaration rules.</summary>
+    public bool AggregatePartialTypes { get; init; }
+
     /// <summary>Rules on top of the defaults.</summary>
     public GuardRules? Rules { get; init; }
     /// <summary>Overrides in order; later matches win.</summary>
