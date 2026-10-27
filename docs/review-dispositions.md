@@ -20,3 +20,28 @@ splitting changes current metrics; both identified compatibility risks.
 No default thresholds were weakened and no consumer baseline was rewritten.
 Project-aware package resolution and runtime dependency topology are explicitly
 outside the source-only graph contract, not implicitly inferred or promised.
+
+## Implementation review of 2772105
+
+Both opposite roles checked the frozen implementation. Five material counterexamples
+were accepted and corrected, with regression controls:
+
+- Aggregate full-directory scope accidentally filtered out deleted/hidden type names.
+  Preserve the original directory/type scope; restrict only newly included counterpart
+  files by selected logical type. Deleted, renamed, generated and excluded cases fail
+  correctly; unrelated counterpart debt is not reclassified.
+- A hidden partial definition could subtract the only eligible implementation.
+  Deduplicate only among eligible method symbols, including tests with either part hidden.
+- Duplicate method signatures could throw during advisory cohesion enrichment.
+  Return unavailable cohesion for ambiguous method identities; preserve syntax metrics.
+- Object-initializer targets were mistaken for current-instance state. Roslyn operation
+  receiver identity now distinguishes a newly constructed object from containing `this`;
+  initializer values that explicitly use `this` still connect correctly.
+- Partial calls and implementations used different symbols. Normalize both to the
+  partial-definition identity, including explicit generic-call tests.
+
+Additionally, the original public four-parameter Analyze overload is retained for
+binary compatibility; the exclusions-aware overload has five required parameters.
+
+Validation after corrections: 114 tests pass; official NuGet 0.0.1 self guard passes
+63 production source types with zero findings, no baseline and unchanged thresholds.

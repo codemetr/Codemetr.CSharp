@@ -21,9 +21,13 @@ public static class CodeAnalyzer
     /// </param>
     /// <param name="typeQuery">When set, only declarations whose simple name can match are measured (see <see cref="AnalysisResult.SelectTypes"/>).</param>
     /// <param name="cancellationToken">Cancels parsing and measuring.</param>
-    /// <param name="excluded">Paths excluded from whole-type partial aggregation; retained as visible context only.</param>
     public static AnalysisResult Analyze(IReadOnlyList<SourceDocument> documents, IReadOnlyList<SourceDocument>? context = null,
-        string? typeQuery = null, CancellationToken cancellationToken = default, IReadOnlyCollection<string>? excluded = null)
+        string? typeQuery = null, CancellationToken cancellationToken = default) =>
+        Analyze(documents, context, typeQuery, cancellationToken, []);
+
+    /// <summary>Analyses with explicit exclusions for logical partial-type measurements; excluded parts stay context only.</summary>
+    public static AnalysisResult Analyze(IReadOnlyList<SourceDocument> documents, IReadOnlyList<SourceDocument>? context,
+        string? typeQuery, CancellationToken cancellationToken, IReadOnlyCollection<string> excluded)
     {
         ArgumentNullException.ThrowIfNull(documents);
         var errors = new List<ParseError>();
@@ -77,7 +81,7 @@ public static class CodeAnalyzer
             types.OrderBy(type => type.Metrics.File, StringComparer.Ordinal).ThenBy(type => type.Start).Select(type => type.Metrics).ToArray(),
             errors, documents.Count) { Warnings = duplicates.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).Concat(InactiveWarning(inactive)).ToArray(),
             FilesWithInactiveCode = inactive.Order(StringComparer.Ordinal).ToArray() };
-        return AnalysisEnrichment.Apply(compilation, result, excluded ?? [], typeQuery, cancellationToken);
+        return AnalysisEnrichment.Apply(compilation, result, excluded, typeQuery, cancellationToken);
     }
 
     // Roslyn merges a type declared twice (not as partial parts) into one symbol with several declarations,
