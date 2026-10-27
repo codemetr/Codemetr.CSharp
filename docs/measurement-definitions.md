@@ -1,9 +1,9 @@
 # Logical types and advisory metrics
 
 These additions do not change existing rule ids, JSON `types` declaration rows or
-baseline keys. New JSON fields are additive under report schema 1. The installed
-published 0.0.1 tool does not contain these additions; candidate regression tests
-exercise the development implementation separately from the published self guard.
+baseline keys. New JSON fields are additive under report schema 1. These features are available in tool 0.1.0. The pinned 0.0.1 self guard does not
+contain these additions; regression tests exercise the 0.1.0 implementation
+separately from that published self guard.
 
 ## Whole partial types and guard admission
 

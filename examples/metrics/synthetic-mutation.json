@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "2",
+  "files": {
+    "src/Ledger.cs": {
+      "mutants": [
+        {
+          "id": "1",
+          "status": "Killed"
+        },
+        {
+          "id": "2",
+          "status": "Survived"
+        },
+        {
+          "id": "3",
+          "status": "Ignored"
+        }
+      ]
+    }
+  }
+}
