@@ -55,16 +55,20 @@ internal static class PartialTypeAggregation
             MaintainabilityIndex = MaintainabilityIndex.Calculate(HalsteadVolume.Measure(tokens), complexity, logical),
             ClassCoupling = coupled.Length, CoupledTypes = coupled,
             ConstructorParameterCount = metrics.Max(type => type.ConstructorParameterCount),
-            PublicMethodCount = metrics.Sum(type => type.PublicMethodCount) - PartialImplementations(compilation, eligible), InstanceFieldCount = metrics.Sum(type => type.InstanceFieldCount),
+            PublicMethodCount = metrics.Sum(type => type.PublicMethodCount) - DuplicatePublicParts(compilation, eligible), InstanceFieldCount = metrics.Sum(type => type.InstanceFieldCount),
             Members = members, Declarations = declarations,
             StrictCoupledTypes = metrics.SelectMany(type => type.StrictCoupledTypes).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
         };
     }
 
-    static int PartialImplementations(CSharpCompilation compilation, IEnumerable<BaseTypeDeclarationSyntax> declarations) =>
-        declarations.OfType<TypeDeclarationSyntax>().SelectMany(type => type.Members.OfType<MethodDeclarationSyntax>())
+    static int DuplicatePublicParts(CSharpCompilation compilation, IEnumerable<BaseTypeDeclarationSyntax> declarations)
+    {
+        var methods = declarations.OfType<TypeDeclarationSyntax>().SelectMany(type => type.Members.OfType<MethodDeclarationSyntax>())
             .Select(method => compilation.GetSemanticModel(method.SyntaxTree).GetDeclaredSymbol(method))
-            .Count(method => method is { PartialDefinitionPart: not null, DeclaredAccessibility: Accessibility.Public });
+            .OfType<IMethodSymbol>().Where(method => method.DeclaredAccessibility == Accessibility.Public)
+            .Select(method => method.PartialDefinitionPart ?? method).ToArray();
+        return methods.Length - methods.Distinct(SymbolEqualityComparer.Default).Count();
+    }
 
     static bool CanMeasure(BaseTypeDeclarationSyntax part, IReadOnlyCollection<string> excluded, CancellationToken cancellationToken) =>
         !part.SyntaxTree.GetDiagnostics(cancellationToken).Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)

@@ -91,4 +91,32 @@ public sealed class AdvisoryMetricsTests
         Assert.Equal(2, named.Groups.Count);
     }
 
+    [Fact]
+    public void SemanticDuplicateMethodsDoNotAbortSyntaxMeasurements()
+    {
+        var result = Source.Analyze("class A { int x; void M() { } void M() { } }");
+        Assert.Single(result.Types);
+        Assert.True(result.Completeness!.SemanticErrorCount > 0);
+        Assert.False(result.Cohesion.Single().Applicable);
+        Assert.Contains("ambiguous", result.Cohesion.Single().Reason);
+    }
+
+    [Fact]
+    public void ObjectInitializerTargetsAreAnotherInstanceButValuesCanUseThisState()
+    {
+        var other = Source.Analyze("class A { int x; void M() { var other = new A { x = 1 }; } void N() { x++; } }").Cohesion.Single();
+        Assert.Equal(2, other.Groups.Count);
+        var current = Source.Analyze("class A { int x; void M() { var other = new A { x = this.x }; } void N() { x++; } }").Cohesion.Single();
+        Assert.Single(current.Groups);
+    }
+
+    [Fact]
+    public void PartialMethodCallsAndGenericCallsConnectTheirImplementation()
+    {
+        var partialCall = Source.Analyze("partial class A { int x; void M() { N(); } partial void N(); partial void N() { x++; } }").Cohesion.Single();
+        Assert.Single(partialCall.Groups);
+        var genericCall = Source.Analyze("class A { int x; void M() { N<int>(); } void N<T>() { x++; } }").Cohesion.Single();
+        Assert.Single(genericCall.Groups);
+    }
+
 }

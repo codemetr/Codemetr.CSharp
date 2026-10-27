@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Codemetr.CSharp;
 
@@ -27,12 +28,14 @@ internal static class CohesionAnalysis
         var methods = declarations.SelectMany(declaration => declaration.Members.OfType<MethodDeclarationSyntax>())
             .Where(method => method.Body is not null || method.ExpressionBody is not null)
             .Select(method => compilation.GetSemanticModel(method.SyntaxTree).GetDeclaredSymbol(method))
-            .OfType<IMethodSymbol>().Where(method => !method.IsStatic).ToArray();
+            .OfType<IMethodSymbol>().Where(method => !method.IsStatic).Select(MethodIdentity).ToArray();
         var fields = declarations.SelectMany(declaration => declaration.Members.OfType<FieldDeclarationSyntax>())
             .SelectMany(field => field.Declaration.Variables).Select(variable => compilation.GetSemanticModel(variable.SyntaxTree).GetDeclaredSymbol(variable))
             .OfType<IFieldSymbol>().Where(field => !field.IsStatic && !field.IsConst).ToArray();
         if (fields.Length == 0 || methods.Length < 2)
             return new(type.FullName, false, "requires explicit instance fields and at least two implemented instance methods", methods.Length, fields.Length, []);
+        if (methods.GroupBy(method => method.ToDisplayString(), StringComparer.Ordinal).Any(group => group.Count() > 1))
+            return new(type.FullName, false, "ambiguous duplicate method identities; semantic errors remain advisory", methods.Length, fields.Length, []);
         var references = methods.ToDictionary(method => (ISymbol)method, method => References(compilation, method), SymbolEqualityComparer.Default);
         var edges = methods.ToDictionary(method => method.ToDisplayString(), method => methods.Where(other => !SymbolEqualityComparer.Default.Equals(method, other)
             && Connected(method, other, fields, references)).Select(other => other.ToDisplayString()).Order(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
@@ -43,7 +46,7 @@ internal static class CohesionAnalysis
     static HashSet<ISymbol> References(CSharpCompilation compilation, IMethodSymbol method)
     {
         var references = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
-        foreach (var syntax in method.DeclaringSyntaxReferences)
+        foreach (var syntax in (method.PartialImplementationPart ?? method).DeclaringSyntaxReferences)
         {
             var root = syntax.GetSyntax();
             var model = compilation.GetSemanticModel(root.SyntaxTree);
@@ -54,15 +57,25 @@ internal static class CohesionAnalysis
                 if (name.Parent is MemberBindingExpressionSyntax) continue;
                 if (IsNameof(name, model)) continue;
                 var symbol = model.GetSymbolInfo(name).Symbol;
-                if (symbol is IFieldSymbol field) references.Add(field.OriginalDefinition);
-                if (symbol is IMethodSymbol called && IsCall(name)) references.Add(called.OriginalDefinition);
+                if (symbol is IFieldSymbol field && IsThisField(name, model)) references.Add(field.OriginalDefinition);
+                if (symbol is IMethodSymbol called && IsThisCall(name, model)) references.Add(MethodIdentity(called.OriginalDefinition));
             }
         }
         return references;
     }
 
-    static bool IsCall(SimpleNameSyntax name) => name.Parent is InvocationExpressionSyntax
-        || name.Parent is MemberAccessExpressionSyntax { Parent: InvocationExpressionSyntax };
+    static IMethodSymbol MethodIdentity(IMethodSymbol method) => method.PartialDefinitionPart ?? method;
+
+    static bool IsThisField(SimpleNameSyntax name, SemanticModel model) =>
+        model.GetOperation(name.Parent is MemberAccessExpressionSyntax access ? access : name) is
+            IFieldReferenceOperation { Instance: IInstanceReferenceOperation { ReferenceKind: InstanceReferenceKind.ContainingTypeInstance } };
+
+    static bool IsThisCall(SimpleNameSyntax name, SemanticModel model)
+    {
+        var invocation = name.Parent is MemberAccessExpressionSyntax access ? access.Parent : name.Parent;
+        return invocation is InvocationExpressionSyntax && model.GetOperation(invocation) is
+            IInvocationOperation { Instance: IInstanceReferenceOperation { ReferenceKind: InstanceReferenceKind.ContainingTypeInstance } };
+    }
 
     static bool IsNameof(SimpleNameSyntax name, SemanticModel model) =>
         name.Ancestors().OfType<InvocationExpressionSyntax>().FirstOrDefault() is

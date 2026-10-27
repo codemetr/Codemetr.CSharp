@@ -3,7 +3,7 @@
 Owner: codex
 Status: in_progress
 Created: 2026-10-27T07:06:58Z
-Updated: 2026-10-27T07:19:52Z
+Updated: 2026-10-27T07:25:07Z
 
 ## Purpose and evidence
 
@@ -19,7 +19,7 @@ Report connected groups of instance methods linked by shared instance fields or 
 
 - [x] M1: Freeze definitions and regression fixtures with positive/negative controls.
 - [x] M2: Implement the bounded change, documentation and scope/provenance output.
-- [ ] M3: Run regression tests and the published NuGet self guard; resolve findings.
+- [x] M3: Run regression tests and the published NuGet self guard; resolve findings.
 - [ ] M4: Review the measured diff, record dispositions, PR to main and inspect current-head checks and bot reviews before merge.
 
 ## Acceptance
@@ -35,3 +35,5 @@ Use the task full clone on `feature/measurement-integrity-and-metrics`. Heavy ru
 - 2026-10-27T07:06:58Z: Owner authorized plans and implementation, including CodeMetr itself as guard.
 
 - 2026-10-27T07:19:52Z: Definitions and regression controls implemented. Existing declaration reports/guards stay compatible; whole-type guard is explicit opt-in with per-file thresholds. Published 0.0.1 self guard remains separate from development algorithm tests. Final validation and independent diff review underway.
+
+- 2026-10-27T07:25:07Z: 114 regression tests and published 0.0.1 self guard (63 production types, zero findings) pass. Five implementation-review counterexamples corrected; narrow re-review and current-head PR admission pending. PR: https://github.com/codemetr/Codemetr.CSharp/pull/4.
