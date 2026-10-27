@@ -3,7 +3,7 @@
 Owner: codex
 Status: in_progress
 Created: 2026-10-27T07:06:58Z
-Updated: 2026-10-27T07:31:09Z
+Updated: 2026-10-27T07:36:02Z
 
 ## Purpose and evidence
 
@@ -39,3 +39,5 @@ Use the task full clone on `feature/measurement-integrity-and-metrics`. Heavy ru
 - 2026-10-27T07:25:07Z: 114 regression tests and published 0.0.1 self guard (63 production types, zero findings) pass. Five implementation-review counterexamples corrected; narrow re-review and current-head PR admission pending. PR: https://github.com/codemetr/Codemetr.CSharp/pull/4.
 
 - 2026-10-27T07:31:09Z: Independent correction review accepted bce2a61. Bot-review dispositions and three extra controls implemented; 117 tests and published full/diff guards pass. Integration remains tracked in PR 4; no NuGet release or consumer upgrade is claimed.
+
+- 2026-10-27T07:36:02Z: Final local validation: 119 tests pass; published full guard measures 64 production types with zero findings. Compiler diagnostic fields explicitly count compilation errors (including context syntax diagnostics). A discovered test helper ambiguity with nested locals is corrected and covered without weakening actual-overload checks.

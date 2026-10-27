@@ -43,7 +43,7 @@ files; that is intentional, not independent debt to sum. Counterpart files and
 selected type identities enter comparison scope together. Existing hidden-code
 and inactive-code baseline protections remain in force.
 
-`completeness` exposes semantic-error count/ids for the compilation context,
+`completeness` exposes compilation-error count/ids (syntax and semantic diagnostics) for the context,
 unresolved coupling names, unmeasured partial declarations and inactive files.
 `contextFilesWithLimits` also lists syntax-error/inactive context files whose
 unmeasured declarations cannot safely be attributed to any selected type. This

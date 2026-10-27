@@ -52,7 +52,7 @@ public sealed class MeasurementIntegrityTests
     {
         var result = Source.Analyze("class A { Missing value; }");
         Assert.Empty(result.ParseErrors);
-        Assert.True(result.Completeness!.SemanticErrorCount > 0);
+        Assert.True(result.Completeness!.CompilationErrorCount > 0);
         Assert.Contains("?Missing", result.Completeness.UnresolvedTypes);
         Assert.Empty(GuardEvaluator.Evaluate(result.Types, new CodemetrConfig()));
     }
