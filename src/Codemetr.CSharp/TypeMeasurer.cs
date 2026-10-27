@@ -43,7 +43,12 @@ internal static class TypeMeasurer
             OwnMembers(declaration).OfType<FieldDeclarationSyntax>()
                 .Where(field => !field.Modifiers.Any(SyntaxKind.StaticKeyword) && !field.Modifiers.Any(SyntaxKind.ConstKeyword))
                 .Sum(field => field.Declaration.Variables.Count),
-            members);
+            members)
+        {
+            StrictCoupledTypes = ClassCoupling.Collect([declaration], symbol, model, strictBinding: true),
+            Namespace = symbol?.ContainingNamespace is { IsGlobalNamespace: false } ns ? ns.ToDisplayString() : "",
+            Declarations = [new MetricDeclaration(file, span.StartLinePosition.Line + 1, true, declaration.SpanStart)],
+        };
     }
 
     // Interface members are public unless they say otherwise.
@@ -70,7 +75,8 @@ internal static class TypeMeasurer
         return new TypeMetrics("Program", "Program", "top-level", file, start + 1, end - start + 1, logicalLines,
             mostComplex.CyclomaticComplexity, mostComplex.Name, totalComplexity,
             MaintainabilityIndex.Calculate(HalsteadVolume.Measure(tokens), totalComplexity, logicalLines),
-            coupled.Count, coupled, 0, 0, 0, 0, members);
+            coupled.Count, coupled, 0, 0, 0, 0, members)
+        { StrictCoupledTypes = ClassCoupling.Collect(statements, null, model, strictBinding: true) };
     }
 
     static int LogicalLines(IEnumerable<SyntaxToken> tokens) => tokens

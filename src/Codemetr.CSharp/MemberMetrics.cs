@@ -15,4 +15,10 @@ public sealed record MemberMetrics(
     int Lines,
     int CyclomaticComplexity,
     int ParameterCount,
-    int NestingDepth);
+    int NestingDepth)
+{
+    /// <summary>C# flow-and-nesting heuristic; advisory, not a default guard.</summary>
+    public int CognitiveComplexity { get; init; }
+    /// <summary>Declaration file, retained when partial types are aggregated.</summary>
+    public string? File { get; init; }
+}

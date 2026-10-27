@@ -21,6 +21,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
           --baseline FILE     baseline file (default: ROOT/codemetr.baseline.json)
           --format json|text  output format (default: json)
           --include-metrics   check: include per-type metrics in the report
+          --mutation-report FILE  import a Stryker mutation-testing-elements v1/v2 JSON report (advisory)
           --top N             number of hotspots in the report (default: 10)
 
         Exit codes: 0 passed, 1 findings, 2 input or usage error.
@@ -33,7 +34,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
         if (command is not (CodemetrService.Analyze or CodemetrService.Check or CodemetrService.RecordBaseline))
             throw new ArgumentException($"Unknown command '{command}'");
         var root = Environment.CurrentDirectory;
-        string? type = null, config = null, baseline = null;
+        string? type = null, config = null, baseline = null, mutation = null;
         var format = Json;
         var includeMetrics = false;
         var top = CodemetrService.DefaultTop;
@@ -49,6 +50,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
                 case "--root": root = Value(); break;
                 case "--type": type = Value(); break;
                 case "--config": config = Value(); break;
+                case "--mutation-report": mutation = Value(); break;
                 case "--baseline": baseline = Value(); break;
                 case "--include-metrics": includeMetrics = true; break;
                 case "--format":
@@ -73,7 +75,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
         return new CliOptions(command, new CodemetrRequest
         {
             Root = root, Paths = paths, ListedFiles = listed, HasFileList = hasFileList, Type = type, ConfigPath = config, BaselinePath = baseline,
-            IncludeMetrics = includeMetrics, Top = top,
+            IncludeMetrics = includeMetrics, Top = top, MutationReport = mutation,
         }, format);
     }
 

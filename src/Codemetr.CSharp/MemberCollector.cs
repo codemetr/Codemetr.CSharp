@@ -23,7 +23,7 @@ internal static class MemberCollector
             var start = body[0].GetLocation().GetLineSpan().StartLinePosition.Line;
             var end = body[^1].GetLocation().GetLineSpan().EndLinePosition.Line;
             members.Add(new MemberMetrics(TopLevelName, "topLevel", start + 1, end - start + 1,
-                1 + body.Sum(statement => CyclomaticComplexity.Measure(statement) - 1), 0, body.Max(NestingDepth.Measure)));
+                1 + body.Sum(statement => CyclomaticComplexity.Measure(statement) - 1), 0, body.Max(NestingDepth.Measure)) { CognitiveComplexity = body.Sum(CognitiveComplexity.Measure), File = statements[0].SyntaxTree.FilePath });
         }
         foreach (var local in statements.Select(statement => statement.Statement).OfType<LocalFunctionStatementSyntax>())
             Add(members, local, local.Identifier.ValueText + Signature(local.ParameterList), "localFunction", local.ParameterList.Parameters.Count);
@@ -99,7 +99,8 @@ internal static class MemberCollector
         var span = node.GetLocation().GetLineSpan();
         return new MemberMetrics(name, kind, span.StartLinePosition.Line + 1,
             span.EndLinePosition.Line - span.StartLinePosition.Line + 1,
-            CyclomaticComplexity.Measure(node), parameters, NestingDepth.Measure(node));
+            CyclomaticComplexity.Measure(node), parameters, NestingDepth.Measure(node))
+        { CognitiveComplexity = CognitiveComplexity.Measure(node), File = node.SyntaxTree.FilePath };
     }
 
     static string Name(BaseMethodDeclarationSyntax method) => method switch
