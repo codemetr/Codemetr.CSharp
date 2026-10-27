@@ -119,4 +119,14 @@ public sealed class AdvisoryMetricsTests
         Assert.Single(genericCall.Groups);
     }
 
+    [Fact]
+    public void GraphPrimitiveSupportsSelfLoopsButCouplingDoesNotTreatSelfAsAnotherType()
+    {
+        var cycle = Assert.Single(StrongComponents.Cycles(new Dictionary<string, string[]> { ["A"] = ["A"] }));
+        Assert.Equal(["A", "A"], cycle.Witness);
+        var graph = Source.Analyze("class A { A next; }").Dependencies!;
+        Assert.Empty(graph.TypeCycles);
+        Assert.Equal(0, graph.Types.Single().FanOut);
+    }
+
 }

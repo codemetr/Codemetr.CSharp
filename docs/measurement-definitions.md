@@ -45,6 +45,9 @@ and inactive-code baseline protections remain in force.
 
 `completeness` exposes semantic-error count/ids for the compilation context,
 unresolved coupling names, unmeasured partial declarations and inactive files.
+`contextFilesWithLimits` also lists syntax-error/inactive context files whose
+unmeasured declarations cannot safely be attributed to any selected type. This
+avoids guessing identities from malformed or disabled source text.
 Semantic errors are advisory because project/package references are unavailable.
 An empty unresolved list is not a claim of project completeness. `summary.skipped`
 continues to count generated/excluded selected files. Future project-aware

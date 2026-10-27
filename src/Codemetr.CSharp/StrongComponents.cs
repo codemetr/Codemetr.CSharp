@@ -20,7 +20,8 @@ internal static class StrongComponents
             while (pending.TryPop(out var current))
                 if (visited.Add(current)) { group.Add(current); foreach (var next in reverse[current]) pending.Push(next); }
             var sorted = group.Order(StringComparer.Ordinal).ToArray();
-            if (sorted.Length > 1) cycles.Add(new(sorted, Witness(sorted, edges)));
+            if (sorted.Length > 1 || edges[sorted[0]].Contains(sorted[0], StringComparer.Ordinal))
+                cycles.Add(new(sorted, Witness(sorted, edges)));
         }
         return cycles.OrderBy(cycle => cycle.Nodes[0], StringComparer.Ordinal).ToArray();
     }

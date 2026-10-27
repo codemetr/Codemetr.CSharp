@@ -3,7 +3,7 @@
 Owner: codex
 Status: in_progress
 Created: 2026-10-27T07:06:58Z
-Updated: 2026-10-27T07:25:07Z
+Updated: 2026-10-27T07:31:09Z
 
 ## Purpose and evidence
 
@@ -37,3 +37,5 @@ Use the task full clone on `feature/measurement-integrity-and-metrics`. Heavy ru
 - 2026-10-27T07:19:52Z: Definitions and regression controls implemented. Existing declaration reports/guards stay compatible; whole-type guard is explicit opt-in with per-file thresholds. Published 0.0.1 self guard remains separate from development algorithm tests. Final validation and independent diff review underway.
 
 - 2026-10-27T07:25:07Z: 114 regression tests and published 0.0.1 self guard (63 production types, zero findings) pass. Five implementation-review counterexamples corrected; narrow re-review and current-head PR admission pending. PR: https://github.com/codemetr/Codemetr.CSharp/pull/4.
+
+- 2026-10-27T07:31:09Z: Independent correction review accepted bce2a61. Bot-review dispositions and three extra controls implemented; 117 tests and published full/diff guards pass. Integration remains tracked in PR 4; no NuGet release or consumer upgrade is claimed.
