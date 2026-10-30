@@ -144,7 +144,7 @@ to an unpublished development build.
 
 ## Member size
 
-Development feature: additive `members[].codeLines` and `statementCount` preserve
+Introduced in published tool 0.2.0: additive `members[].codeLines` and `statementCount` preserve
 the positional MemberMetrics constructor and existing `lines` declaration span.
 Code lines count distinct physical lines occupied by non-brace body tokens. Ignore
 signatures, attributes, comments, trivia and braces; include every line within a

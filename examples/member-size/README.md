@@ -1,11 +1,14 @@
-# Member-size example (development feature)
+# Member-size example (0.2.0)
 
-This example requires the member-size feature. Published tool 0.1.0 does not
-support the new rule fields. Do not run this configuration with that version,
-install from a local feed, or silently change a repository's pinned tool.
-After an authorised release containing the feature, use that published version.
+Use the published `Codemetr.CSharp.Tool` **0.2.0** and .NET 10. Tool 0.1.0 does
+not support the new rule fields. Do not silently change a repository's pinned tool
+or install from a local package feed. For an approved global installation:
 
-From the Codemetr.CSharp repository root, with the feature-capable tool selected:
+```bash
+dotnet tool install --global Codemetr.CSharp.Tool --version 0.2.0
+```
+
+From the Codemetr.CSharp repository root, with version 0.2.0 selected:
 
 ```bash
 codemetr-csharp analyze --root examples/member-size --format json --top 2
