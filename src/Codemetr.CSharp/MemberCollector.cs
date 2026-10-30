@@ -22,10 +22,12 @@ internal static class MemberCollector
         {
             var start = body[0].GetLocation().GetLineSpan().StartLinePosition.Line;
             var end = body[^1].GetLocation().GetLineSpan().EndLinePosition.Line;
+            var size = MemberSize.Measure(body);
             members.Add(new MemberMetrics(TopLevelName, "topLevel", start + 1, end - start + 1,
-                1 + body.Sum(statement => CyclomaticComplexity.Measure(statement) - 1), 0, body.Max(NestingDepth.Measure)) { CognitiveComplexity = body.Sum(CognitiveComplexity.Measure), File = statements[0].SyntaxTree.FilePath });
+                1 + body.Sum(statement => CyclomaticComplexity.Measure(statement) - 1), 0, body.Max(NestingDepth.Measure)) { CodeLines = size.CodeLines, StatementCount = size.StatementCount, CognitiveComplexity = body.Sum(CognitiveComplexity.Measure), File = statements[0].SyntaxTree.FilePath });
         }
-        foreach (var local in statements.Select(statement => statement.Statement).OfType<LocalFunctionStatementSyntax>())
+        foreach (var local in statements.SelectMany(statement => statement.DescendantNodes(
+                     child => child is not LocalFunctionStatementSyntax)).OfType<LocalFunctionStatementSyntax>())
             Add(members, local, local.Identifier.ValueText + Signature(local.ParameterList), "localFunction", local.ParameterList.Parameters.Count);
         return members;
     }
@@ -79,9 +81,10 @@ internal static class MemberCollector
 
     static void Add(List<MemberMetrics> members, SyntaxNode node, string name, string kind, int parameters)
     {
+        if (node is LocalFunctionStatementSyntax { Body: null, ExpressionBody: null }) return;
         members.Add(Measure(node, name, kind, parameters));
         foreach (var local in node.DescendantNodes(child => child == node || child is not BaseTypeDeclarationSyntax)
-                     .OfType<LocalFunctionStatementSyntax>())
+                     .OfType<LocalFunctionStatementSyntax>().Where(local => local.Body is not null || local.ExpressionBody is not null))
             members.Add(Measure(local, name + "." + local.Identifier.ValueText + Signature(local.ParameterList), "localFunction", local.ParameterList.Parameters.Count));
     }
 
@@ -97,10 +100,11 @@ internal static class MemberCollector
     static MemberMetrics Measure(SyntaxNode node, string name, string kind, int parameters)
     {
         var span = node.GetLocation().GetLineSpan();
+        var size = MemberSize.Measure([node]);
         return new MemberMetrics(name, kind, span.StartLinePosition.Line + 1,
             span.EndLinePosition.Line - span.StartLinePosition.Line + 1,
             CyclomaticComplexity.Measure(node), parameters, NestingDepth.Measure(node))
-        { CognitiveComplexity = CognitiveComplexity.Measure(node), File = node.SyntaxTree.FilePath };
+        { CodeLines = size.CodeLines, StatementCount = size.StatementCount, CognitiveComplexity = CognitiveComplexity.Measure(node), File = node.SyntaxTree.FilePath };
     }
 
     static string Name(BaseMethodDeclarationSyntax method) => method switch

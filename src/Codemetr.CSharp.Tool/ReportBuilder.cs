@@ -32,7 +32,7 @@ internal static class ReportBuilder
         var includeTypes = command == CodemetrService.Analyze || request.IncludeMetrics;
         return new CodemetrReport(ReportSchema, "codemetr-csharp", CodemetrService.Version, command, passed, summary, rows, stale, parseErrors,
             Hotspots(result.Types, request.Top), includeTypes ? result.Types : null, written, warnings.Count > 0 ? warnings : null, includeTypes ? result.WholeTypes : null, result.Completeness,
-            result.Dependencies, result.Cohesion);
+            result.Dependencies, result.Cohesion) { MemberHotspots = MemberHotspots.Build(result.Types, request.Top) };
     }
 
     // Hotspot order: complexity first, then coupling, inheritance, maintainability, size.

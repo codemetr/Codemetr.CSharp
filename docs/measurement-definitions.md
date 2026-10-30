@@ -140,3 +140,37 @@ Candidate unit/CLI regression tests test new algorithms; they do not replace it.
 A future consumer upgrade requires publishing a new immutable package version
 through the normal passing PR and release procedure. No consumers are switched
 to an unpublished development build.
+
+
+## Member size
+
+Development feature: additive `members[].codeLines` and `statementCount` preserve
+the positional MemberMetrics constructor and existing `lines` declaration span.
+Code lines count distinct physical lines occupied by non-brace body tokens. Ignore
+signatures, attributes, comments, trivia and braces; include every line within a
+multiline token, even a blank line inside a literal. This is lexical body size,
+not an IL-instruction or runtime execution count. A semicolon-only body occupies
+a code line but contributes no counted statement.
+
+Statement count includes each StatementSyntax except blocks, empty statements
+and local-function declarations. Controls and declarations count alongside their
+child statements. Else clauses are not statements. Expression-bodied members add
+one root statement; expression lambdas do not add a separate statement. Statements
+in lambda blocks belong to the containing member. Local functions and nested
+types are pruned and measured separately, including nested top-level functions.
+Auto-accessors, abstract/extern declarations and initialisers remain outside the
+executable-member inventory. Partial members retain declaration-file provenance.
+
+Nullable rules `maxMemberCodeLines` and `maxMemberStatements` are disabled by
+default, inclusive when configured, and use existing file/type overrides and
+baseline ratchets. Their IDs are `memberCodeLines` and `memberStatements`.
+Opting in is a deliberate policy decision, not an automatic upgrade consequence.
+
+`memberHotspots` is a structured list independent of `types` inclusion. It exposes
+type/member/kind/file/line, codeLines, statementCount, cyclomaticComplexity,
+cognitiveComplexity, nestingDepth and parameterCount. Rank descending by body
+code lines, statements, cognitive and cyclomatic complexity; ties use ordinal
+file, type, member and then line. --top independently limits both existing type
+hotspots and this list; zero suppresses both. File/type selection limits its scope.
+No coverage is inferred or joined. Empty lists mean no selected executable members
+(or --top 0), not proof that a project has no risks. Short code does not prove SRP.

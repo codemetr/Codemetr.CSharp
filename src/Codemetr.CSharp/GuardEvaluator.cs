@@ -47,6 +47,8 @@ public static class GuardEvaluator
                             $"{type.FullName}.{member.Name}: {what} {value} exceeds max {max}."));
                 }
                 MemberMax(RuleIds.CyclomaticComplexity, member.CyclomaticComplexity, rules.MaxCyclomaticComplexity, "cyclomatic complexity");
+                MemberMax(RuleIds.MemberCodeLines, member.CodeLines, rules.MaxMemberCodeLines, "body code lines");
+                MemberMax(RuleIds.MemberStatements, member.StatementCount, rules.MaxMemberStatements, "statement count");
                 MemberMax(RuleIds.Parameters, member.ParameterCount, rules.MaxParameters, "parameter count");
                 MemberMax(RuleIds.NestingDepth, member.NestingDepth, rules.MaxNestingDepth, "nesting depth");
             }

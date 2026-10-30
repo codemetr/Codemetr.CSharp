@@ -22,7 +22,7 @@ internal sealed record CliOptions(string Command, CodemetrRequest Request, strin
           --format json|text  output format (default: json)
           --include-metrics   check: include per-type metrics in the report
           --mutation-report FILE  import a Stryker mutation-testing-elements v1/v2 JSON report (advisory)
-          --top N             number of hotspots in the report (default: 10)
+          --top N             maximum entries per type/member hotspot list (default: 10)
 
         Exit codes: 0 passed, 1 findings, 2 input or usage error.
         """;

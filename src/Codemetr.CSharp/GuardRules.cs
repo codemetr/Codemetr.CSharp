@@ -26,6 +26,10 @@ public sealed record GuardRules
     public int? MaxParameters { get; init; }
     /// <summary>Control-flow nesting of any single member.</summary>
     public int? MaxNestingDepth { get; init; }
+    /// <summary>Optional upper bound on member body code lines; disabled by default.</summary>
+    public int? MaxMemberCodeLines { get; init; }
+    /// <summary>Optional upper bound on syntactic member statements; disabled by default.</summary>
+    public int? MaxMemberStatements { get; init; }
     /// <summary>Type name suffixes that signal a catch-all owner.</summary>
     public string[]? BannedTypeNameSuffixes { get; init; }
 
@@ -62,6 +66,8 @@ public sealed record GuardRules
         MaxDepthOfInheritance = other.MaxDepthOfInheritance ?? MaxDepthOfInheritance,
         MaxParameters = other.MaxParameters ?? MaxParameters,
         MaxNestingDepth = other.MaxNestingDepth ?? MaxNestingDepth,
+        MaxMemberCodeLines = other.MaxMemberCodeLines ?? MaxMemberCodeLines,
+        MaxMemberStatements = other.MaxMemberStatements ?? MaxMemberStatements,
         BannedTypeNameSuffixes = other.BannedTypeNameSuffixes ?? BannedTypeNameSuffixes,
     };
 }

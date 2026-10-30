@@ -25,6 +25,7 @@ internal static class TextReport
             output.WriteLine("Hotspots:");
             for (var index = 0; index < report.Hotspots.Count; index++) output.WriteLine($"  {index + 1}. {report.Hotspots[index]}");
         }
+        MemberHotspots.Write(report.MemberHotspots, output);
         AdvisoryTextReport.Write(report, output);
         if (report.BaselineWritten is not null) output.WriteLine($"Baseline written: {report.BaselineWritten}");
     }

@@ -23,6 +23,10 @@ public static class RuleIds
     public const string Parameters = "parameters";
     /// <summary>Member nesting depth.</summary>
     public const string NestingDepth = "nestingDepth";
+    /// <summary>Member body code lines.</summary>
+    public const string MemberCodeLines = "memberCodeLines";
+    /// <summary>Syntactic member statements.</summary>
+    public const string MemberStatements = "memberStatements";
     /// <summary>Catch-all type name suffix.</summary>
     public const string BannedTypeNameSuffix = "bannedTypeNameSuffix";
 
@@ -42,6 +46,8 @@ public static class RuleIds
         DepthOfInheritance => "Prefer composition over deep inheritance chains.",
         Parameters => "Introduce a parameter object or split the member; long parameter lists hide missing concepts.",
         NestingDepth => "Flatten with early returns or guard clauses, or extract the inner block into a method.",
+        MemberCodeLines => "Split a long body along cohesive operations; preserve meaningful names and avoid splitting merely to reduce line counts.",
+        MemberStatements => "Separate distinct steps or responsibilities; retain the behaviour and avoid moving statements into unnamed wrappers.",
         BannedTypeNameSuffix => "Name the type after its single responsibility; catch-all suffixes attract unrelated code.",
         _ => string.Empty,
     };
