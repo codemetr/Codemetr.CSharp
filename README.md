@@ -59,6 +59,18 @@ thresholds remain. Use the [runnable examples](examples/README.md) to inspect th
 The pinned 0.0.1 self guard is a separate quality check of this repository; it
 does not exercise the new measurements and is not upgraded by installing 0.1.0.
 
+## Member size and hotspots (development feature)
+
+The next release adds `members[].codeLines`, `members[].statementCount` and
+structured `memberHotspots` in JSON plus a separate text list. Existing `lines`
+retains its declaration-span meaning. `--top` limits each type/member list;
+member ordering prioritises body code lines, then statements and complexity.
+New rules `maxMemberCodeLines` and `maxMemberStatements` are opt-in and disabled
+by default. Published 0.1.0 does not accept them; retain existing consumer pins.
+See the [runnable member-size example](examples/member-size/README.md) and
+[precise definitions](docs/measurement-definitions.md#member-size).
+No test coverage is inferred from static metrics.
+
 ## Metrics
 
 Each type declaration is measured on its own, nested types included. Members belong to the

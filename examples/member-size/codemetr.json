@@ -1,0 +1,7 @@
+{
+  "context": ["."],
+  "rules": {
+    "maxMemberCodeLines": 8,
+    "maxMemberStatements": 8
+  }
+}

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Retain separately measured local functions inside top-level blocks; skip bodyless extern locals.
+- Add body code-line and syntactic statement counts per executable member.
+- Add disabled-by-default member-size guards with existing override and baseline semantics.
+- Add structured JSON and text member hotspots without changing type hotspots or inferring coverage.
+- Add precise ownership definitions, a runnable long-flat-method example and Spec Kit artefacts.
+
 ## 0.1.0 - 2026-10-27
 
 - Add logical partial-type metrics with declaration/member provenance and an explicit opt-in aggregate guard.

@@ -17,6 +17,10 @@ public sealed record MemberMetrics(
     int ParameterCount,
     int NestingDepth)
 {
+    /// <summary>Physical body lines occupied by non-brace tokens; local functions are measured separately.</summary>
+    public int CodeLines { get; init; }
+    /// <summary>Non-block, non-empty body statements, excluding separately measured local functions.</summary>
+    public int StatementCount { get; init; }
     /// <summary>C# flow-and-nesting heuristic; advisory, not a default guard.</summary>
     public int CognitiveComplexity { get; init; }
     /// <summary>Declaration file, retained when partial types are aggregated.</summary>

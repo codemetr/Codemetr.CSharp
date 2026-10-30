@@ -19,4 +19,7 @@ internal sealed record CodemetrReport(
     Codemetr.CSharp.AnalysisCompleteness? Completeness = null,
     Codemetr.CSharp.DependencyGraph? Dependencies = null,
     IReadOnlyList<Codemetr.CSharp.CohesionMetrics>? Cohesion = null,
-    MutationReport? Mutation = null);
+    MutationReport? Mutation = null)
+{
+    public IReadOnlyList<MemberHotspot> MemberHotspots { get; init; } = [];
+}

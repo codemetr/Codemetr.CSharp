@@ -49,3 +49,12 @@ The advisory cycle, cognitive and cohesion measurements and imported mutation
 score do not create new default failure thresholds. A passing `check` means the
 configured static guard passed, not that the sample architecture or tests are
 proven good. See [precise definitions](../docs/measurement-definitions.md).
+
+
+## Member-size development example
+
+The [member-size fixture](member-size/README.md) demonstrates a long flat method,
+body code lines, statements, static member hotspots and opt-in rules. Its new
+configuration requires the feature-capable release; published 0.1.0 remains valid
+for the examples above. Regression tests execute the candidate directly without
+installing a development tool or using a local package feed.
