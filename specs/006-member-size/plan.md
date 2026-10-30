@@ -1,6 +1,6 @@
 # Implementation plan
 
-Status: in_progress
+Status: done (implementation and validation complete; checked PR delivery)
 Owner: repository maintainer, Alexander Bleissem
 
 Existing .NET 10, Roslyn, xUnit and published self guard. No new package dependency.

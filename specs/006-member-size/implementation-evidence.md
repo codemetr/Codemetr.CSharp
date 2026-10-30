@@ -46,3 +46,20 @@ Measured validation record: 2026-10-30T11:08:39Z.
 Base: 3906768, with the feature working tree. Sorted path/content SHA-256 over
 src/tests/examples excluding bin and obj: `5f146f8edc0f2e437bec90d1c621db8f094c5b47364ab8c8137aa640d708e429`.
 Both the full and pre-commit diff guards exited 0. SDK: 10.0.403.
+
+
+## Hosted validation and delivery
+
+Recorded at 2026-10-30T11:12:39Z.
+Marketplace PR codemetr/skills#4 merged as 5df6070 after its validate check passed
+and no pending reviews or unresolved threads were present. Both manifests deliver
+plugin 0.3.0; this changes guidance, not the consumer tool installation.
+
+Tool PR codemetr/Codemetr.CSharp#7 source head
+6550d63e87038bfe5d65b82ae6dbd075c0a1c394 passed the build check and Codacy Static
+Code Analysis; Codacy's completed summary reports zero new issues. No requested
+reviews or unresolved review threads were present. This final documentation-only
+completion commit must pass fresh checks before the PR can merge. No source,
+measurement contract or executed example changed since the recorded source digest.
+All 12 tasks are complete; source-bound Cover joining has its own owner and concrete
+ready follow-up. No tool package publication or live host evaluation is claimed.

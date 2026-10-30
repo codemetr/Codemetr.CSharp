@@ -20,7 +20,7 @@
 - [x] T009 Update codemetr/skills analysis, guard and tool references plus packaging validation (FR-007).
 - [x] T010 Prepare specs/007-cover-member-link with owner, requirements, plan, next steps and acceptance (FR-008).
 - [x] T011 Run full tests/build and unchanged published self guard, record evidence and source digest (FR-001–008).
-- [ ] T012 Commit/push and open reviewed PRs; merge only if required checks/reviews allow (FR-007).
+- [x] T012 Commit/push and open reviewed PRs; merge only if required checks/reviews allow (FR-007).
 
 Dependencies: T001→T002→T003→T004; T005 follows T004; T006 precedes T007.
 T008–T010 follow the relevant contracts; T011 follows all implementation tasks.
