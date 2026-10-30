@@ -1,6 +1,6 @@
-# Inspect the 0.1.0 measurements
+# Inspect the published measurements
 
-Use the published `Codemetr.CSharp.Tool` **0.1.0** and .NET 10. No tool source
+Use the published `Codemetr.CSharp.Tool` **0.2.0** and .NET 10. No tool source
 checkout or local package feed is required. From this repository root:
 
 ```bash
@@ -15,7 +15,7 @@ relative to the selected `--root examples/metrics`, not the shell working
 directory. Do not prepend `examples/metrics` to the mutation path again.
 
 An existing global installation can be updated deliberately with
-`dotnet tool update --global Codemetr.CSharp.Tool --version 0.1.0`. Respect a
+`dotnet tool update --global Codemetr.CSharp.Tool --version 0.2.0`. Respect a
 consuming repository's pinned version; do not silently replace it. This example
 opts into whole-partial-type checks in its own configuration. It changes no
 production thresholds or baselines. The root repository's local tool manifest
@@ -51,10 +51,10 @@ configured static guard passed, not that the sample architecture or tests are
 proven good. See [precise definitions](../docs/measurement-definitions.md).
 
 
-## Member-size development example
+## Member-size example (0.2.0)
 
 The [member-size fixture](member-size/README.md) demonstrates a long flat method,
 body code lines, statements, static member hotspots and opt-in rules. Its new
-configuration requires the feature-capable release; published 0.1.0 remains valid
-for the examples above. Regression tests execute the candidate directly without
-installing a development tool or using a local package feed.
+configuration requires published 0.2.0; older 0.1.0 remains valid for the examples
+above but does not accept the new rule fields. Regression tests also exercise the
+implementation without installing a development tool or using a local package feed.

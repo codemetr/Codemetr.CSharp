@@ -14,14 +14,14 @@ works on a developer machine, in a pre-commit hook and in CI.
 
 Requires .NET 10.
 
-Install version **0.1.0** from nuget.org without a source checkout. See
+Install version **0.2.0** from nuget.org without a source checkout. See
 [branch protection and releases](.github/RELEASING.md) for the manual publication
 workflow. Tool and marketplace-plugin versions are independent.
 
 ## Install and run
 
 ```bash
-dotnet tool install --global Codemetr.CSharp.Tool --version 0.1.0
+dotnet tool install --global Codemetr.CSharp.Tool --version 0.2.0
 
 codemetr-csharp analyze src --format text          # metrics + hotspots, always exit 0 unless input error
 codemetr-csharp check src                          # guard, JSON report, exit 1 on findings
@@ -57,16 +57,16 @@ specified in [measurement definitions](docs/measurement-definitions.md). New met
 are advisory; existing declaration reports, baseline identities and default guard
 thresholds remain. Use the [runnable examples](examples/README.md) to inspect these report fields.
 The pinned 0.0.1 self guard is a separate quality check of this repository; it
-does not exercise the new measurements and is not upgraded by installing 0.1.0.
+does not exercise the new measurements and is not upgraded by installing 0.2.0.
 
-## Member size and hotspots (development feature)
+## Member size and hotspots (0.2.0)
 
-The next release adds `members[].codeLines`, `members[].statementCount` and
+Version 0.2.0 adds `members[].codeLines`, `members[].statementCount` and
 structured `memberHotspots` in JSON plus a separate text list. Existing `lines`
 retains its declaration-span meaning. `--top` limits each type/member list;
 member ordering prioritises body code lines, then statements and complexity.
 New rules `maxMemberCodeLines` and `maxMemberStatements` are opt-in and disabled
-by default. Published 0.1.0 does not accept them; retain existing consumer pins.
+by default. Older 0.1.0 does not accept them; upgrade consuming pins deliberately.
 See the [runnable member-size example](examples/member-size/README.md) and
 [precise definitions](docs/measurement-definitions.md#member-size).
 No test coverage is inferred from static metrics.

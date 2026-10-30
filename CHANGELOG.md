@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-10-30
 
 - Retain separately measured local functions inside top-level blocks; skip bodyless extern locals.
 - Add body code-line and syntactic statement counts per executable member.
